@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
-@import 'tw-shimmer';
 @import 'katex/dist/katex.min.css';
 @import '@vscode/codicons/dist/codicon.css';
 @custom-variant dark (&:is(.dark *));
@@ -42,14 +41,17 @@
 
   --spacing-mul: var(--dt-spacing-mul, 1);
 
-  --radius-xs: calc(var(--radius-scalar) * 0.125rem);
-  --radius-sm: calc(var(--radius-scalar) * 0.5rem);
-  --radius-md: calc(var(--radius-scalar) * 0.625rem);
+  /* Unified corner radius: every size token collapses to one value (lg).
+     The whole app uses a single corner radius — rounded-{xs,sm,md,lg,xl,2xl,3xl,4xl}
+     all resolve to the same 0.75rem * scalar. Circles (rounded-full) are exempt. */
+  --radius-xs: calc(var(--radius-scalar) * 0.75rem);
+  --radius-sm: calc(var(--radius-scalar) * 0.75rem);
+  --radius-md: calc(var(--radius-scalar) * 0.75rem);
   --radius-lg: calc(var(--radius-scalar) * 0.75rem);
-  --radius-xl: calc(var(--radius-scalar) * 1rem);
-  --radius-2xl: calc(var(--radius-scalar) * 1.5rem);
-  --radius-3xl: calc(var(--radius-scalar) * 2rem);
-  --radius-4xl: calc(var(--radius-scalar) * 2.5rem);
+  --radius-xl: calc(var(--radius-scalar) * 0.75rem);
+  --radius-2xl: calc(var(--radius-scalar) * 0.75rem);
+  --radius-3xl: calc(var(--radius-scalar) * 0.75rem);
+  --radius-4xl: calc(var(--radius-scalar) * 0.75rem);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -86,185 +88,119 @@
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: dark;
 
-    --theme-foreground: #17171a;
-    --theme-primary: #0053fd;
-    --theme-secondary: color-mix(in srgb, #0053fd 7%, #ffffff);
-    --theme-accent-soft: color-mix(in srgb, #0053fd 10%, #ffffff);
-    --theme-midground: #0053fd;
-    --theme-warm: #cf806d;
-    --theme-background-seed: #f8faff;
-    --theme-sidebar-seed: #f3f7ff;
-    --theme-card-seed: #ffffff;
-    --theme-elevated-seed: #ffffff;
-    --theme-bubble-seed: color-mix(in srgb, #0053fd 6%, #ffffff);
-    --theme-neutral-chrome: #f3f3f3;
-    --theme-neutral-sidebar: #f3f3f3;
-    --theme-neutral-card: #fcfcfc;
-    --theme-mix-chrome: 92%;
-    --theme-mix-sidebar: 100%;
-    --theme-mix-card: 22%;
-    --theme-mix-elevated: 28%;
-    --theme-mix-bubble: 0%;
-    --theme-fill-primary-accent-mix: 16%;
-    --theme-fill-secondary-accent-mix: 11%;
-    --theme-fill-tertiary-accent-mix: 8%;
-    --theme-fill-quaternary-accent-mix: 5%;
-    --theme-fill-quinary-accent-mix: 3%;
-    --theme-stroke-primary-accent-mix: 24%;
-    --theme-stroke-secondary-accent-mix: 16%;
-    --theme-stroke-tertiary-accent-mix: 10%;
-    --theme-stroke-quaternary-accent-mix: 6%;
-    --theme-row-hover-accent-mix: 4%;
-    --theme-row-active-accent-mix: 8%;
-    --theme-control-hover-accent-mix: 6%;
-    --theme-control-active-accent-mix: 8%;
+    /* ───────────────────────────────────────────────────────────────────
+       Monochrome dark — the only theme.
 
-    --ui-base: var(--theme-foreground);
-    --ui-accent: var(--theme-midground);
-    --ui-accent-secondary: var(--theme-primary);
-    --ui-warm: var(--theme-warm);
-    --ui-red: #cf2d56;
+       The multi-theme system (color seeds, per-mode mix knobs, the
+       light/dark split, the JS ThemeProvider that injected these vars at
+       runtime) was removed. Every token below is hardcoded and FLAT — no
+       color-mix(... transparent), no alpha — per the "flatten everything"
+       direction. `.dark` is set statically on <html> so Tailwind `dark:`
+       utilities still resolve.
+       ─────────────────────────────────────────────────────────────────── */
+
+    /* Still referenced directly by a couple of components (the sidebar
+       section label, the gateway "connecting" wordmark). */
+    --theme-primary: #eaeaea;
+
+    /* Accent + semantic colors (status dots, error/success, syntax). Kept
+       chromatic so error≠success stays legible; the chrome is grayscale. */
+    --ui-base: #eaeaea;
+    --ui-accent: #9a9a9a;
+    --ui-accent-secondary: #eaeaea;
+    --ui-warm: #c8c8c8;
+    --ui-red: #e75e78;
     --ui-orange: #db704b;
     --ui-yellow: #c08532;
-    --ui-green: #1f8a65;
-    --ui-cyan: #4c7f8c;
-    --ui-blue: #0053fd;
+    --ui-green: #55a583;
+    --ui-cyan: #6f9ba6;
+    --ui-blue: #6f9ba6;
     --ui-purple: #9e94d5;
-    --ui-bg-chrome: color-mix(
-      in srgb,
-      var(--theme-background-seed) var(--theme-mix-chrome),
-      var(--theme-neutral-chrome)
-    );
-    --ui-bg-sidebar: color-mix(
-      in srgb,
-      var(--theme-sidebar-seed) var(--theme-mix-sidebar),
-      var(--theme-neutral-sidebar)
-    );
-    --ui-bg-editor: color-mix(in srgb, var(--theme-card-seed) var(--theme-mix-card), var(--theme-neutral-card));
-    --ui-bg-elevated: color-mix(
-      in srgb,
-      var(--theme-elevated-seed) var(--theme-mix-elevated),
-      var(--theme-neutral-card)
-    );
-    --ui-bg-card: color-mix(in srgb, var(--ui-accent) 4%, color-mix(in srgb, var(--ui-base) 4%, transparent));
-    --ui-bg-input: #fcfcfc;
-    --ui-bg-primary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-fill-primary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 10%, transparent)
-    );
-    --ui-bg-secondary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-fill-secondary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 7%, transparent)
-    );
-    --ui-bg-tertiary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-fill-tertiary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 5%, transparent)
-    );
-    --ui-bg-quaternary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-fill-quaternary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 4%, transparent)
-    );
-    --ui-bg-quinary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-fill-quinary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 3%, transparent)
-    );
-    --ui-row-hover-background: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-row-hover-accent-mix),
-      color-mix(in srgb, var(--ui-base) 3%, transparent)
-    );
-    --ui-row-active-background: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-row-active-accent-mix),
-      color-mix(in srgb, var(--ui-base) 5%, transparent)
-    );
-    --ui-control-hover-background: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-control-hover-accent-mix),
-      color-mix(in srgb, var(--ui-base) 4%, transparent)
-    );
-    --ui-control-active-background: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-control-active-accent-mix),
-      color-mix(in srgb, var(--ui-base) 5%, transparent)
-    );
-    --ui-text-primary: color-mix(in srgb, var(--ui-base) 94%, transparent);
-    --ui-text-secondary: color-mix(in srgb, var(--ui-base) 74%, transparent);
-    --ui-text-tertiary: color-mix(in srgb, var(--ui-base) 54%, transparent);
-    --ui-text-quaternary: color-mix(in srgb, var(--ui-base) 36%, transparent);
-    --ui-stroke-primary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-stroke-primary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 10%, transparent)
-    );
-    --ui-stroke-secondary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-stroke-secondary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 7%, transparent)
-    );
-    --ui-stroke-tertiary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-stroke-tertiary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 5%, transparent)
-    );
-    --ui-stroke-quaternary: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-stroke-quaternary-accent-mix),
-      color-mix(in srgb, var(--ui-base) 3%, transparent)
-    );
-    --ui-sash-hover-border: color-mix(in srgb, var(--ui-accent) 18%, var(--ui-stroke-tertiary));
-    --ui-sash-hover-background: color-mix(in srgb, var(--ui-accent) 6%, transparent);
+
+    /* Solid surface backgrounds. */
+    --ui-bg-chrome: #0e0e0e;
+    --ui-bg-sidebar: #0a0a0a;
+    --ui-bg-editor: #141414;
+    --ui-bg-elevated: #181818;
+    --ui-bg-card: #161616;
+    --ui-bg-input: #161616;
+    --ui-bg-primary: #2c2c2c;
+    --ui-bg-secondary: #262626;
+    --ui-bg-tertiary: #1e1e1e;
+    --ui-bg-quaternary: #1a1a1a;
+    --ui-bg-quinary: #161616;
+    --ui-row-hover-background: #1a1a1a;
+    --ui-row-active-background: #242424;
+    --ui-control-hover-background: #1c1c1c;
+    --ui-control-active-background: #262626;
+    /* Solid replacements for former translucent washes (Material-style opaque
+       surfaces): selected/active accent fills (primary was a light color, so a
+       translucent wash → solid elevated gray, NOT solid white) and error tint. */
+    --ui-bg-selected: #242424;
+    --ui-bg-error: #2a1618;
+    --ui-border-error: #5e2c30;
+
+    /* Solid text tiers (hierarchy collapsed to opaque grays). */
+    --ui-text-primary: #eaeaea;
+    --ui-text-secondary: #c8c8c8;
+    --ui-text-tertiary: #8a8a8a;
+    --ui-text-quaternary: #6a6a6a;
+
+    /* Solid strokes. */
+    --ui-stroke-primary: #303030;
+    --ui-stroke-secondary: #2a2a2a;
+    --ui-stroke-tertiary: #222222;
+    --ui-stroke-quaternary: #1c1c1c;
+    --ui-sash-hover-border: #3a3a3a;
+    --ui-sash-hover-background: #1c1c1c;
+
     --ui-surface-background: var(--ui-bg-editor);
     --ui-sidebar-surface-background: var(--ui-bg-sidebar);
     --ui-chat-surface-background: var(--ui-bg-chrome);
     --ui-editor-surface-background: var(--ui-bg-chrome);
-    --ui-chat-bubble-background: color-mix(
-      in srgb,
-      var(--theme-bubble-seed) var(--theme-mix-bubble),
-      var(--theme-neutral-card)
-    );
+    --ui-chat-bubble-background: #1a1a1a;
     --ui-chat-bubble-opaque-background: var(--ui-bg-editor);
-    --ui-inline-code-background: color-mix(in srgb, #141414 5%, transparent);
-    --ui-inline-code-border: color-mix(in srgb, #141414 8%, transparent);
-    --ui-inline-code-foreground: color-mix(in srgb, #141414 88%, transparent);
-    --ui-selection-background: color-mix(in srgb, #ffd24a 55%, transparent);
+    --ui-inline-code-background: #1c1c1c;
+    --ui-inline-code-border: #2a2a2a;
+    --ui-inline-code-foreground: #79c0ff;
+    --ui-selection-background: #34343a;
 
-    --dt-background: var(--ui-bg-chrome);
-    --dt-foreground: var(--ui-text-primary);
-    --dt-card: var(--ui-bg-editor);
-    --dt-card-foreground: var(--ui-text-primary);
-    --dt-muted: var(--ui-bg-tertiary);
-    --dt-muted-foreground: var(--ui-text-tertiary);
-    --dt-popover: color-mix(in srgb, var(--ui-bg-elevated) 96%, transparent);
-    --dt-popover-foreground: var(--ui-text-primary);
-    --dt-primary: var(--theme-primary);
-    --dt-primary-foreground: #fcfcfc;
-    --dt-secondary: var(--theme-secondary);
-    --dt-secondary-foreground: var(--ui-text-secondary);
-    --dt-accent: var(--theme-accent-soft);
-    --dt-accent-foreground: var(--ui-text-primary);
-    --dt-border: var(--ui-stroke-secondary);
-    --dt-input: var(--ui-stroke-primary);
-    --dt-ring: var(--ui-stroke-primary);
-    --dt-midground: var(--theme-midground);
-    --dt-composer-ring: var(--ui-base);
-    --dt-destructive: #cf2d56;
-    --dt-destructive-foreground: #ffffff;
-    --dt-sidebar-bg: var(--ui-bg-sidebar);
-    --dt-sidebar-border: var(--ui-stroke-secondary);
-    --dt-user-bubble: var(--ui-chat-bubble-background);
-    --dt-user-bubble-border: var(--ui-stroke-tertiary);
+    --dt-background: #0e0e0e;
+    --dt-foreground: #eaeaea;
+    --dt-card: #141414;
+    --dt-card-foreground: #eaeaea;
+    --dt-muted: #1e1e1e;
+    --dt-muted-foreground: #808080;
+    --dt-popover: #181818;
+    --dt-popover-foreground: #eaeaea;
+    --dt-primary: #eaeaea;
+    --dt-primary-foreground: #0e0e0e;
+    --dt-secondary: #262626;
+    --dt-secondary-foreground: #c8c8c8;
+    --dt-accent: #222222;
+    --dt-accent-foreground: #d8d8d8;
+    --dt-border: #2a2a2a;
+    --dt-input: #2a2a2a;
+    --dt-ring: #9a9a9a;
+    --dt-midground: #9a9a9a;
+    --dt-midground-foreground: #ffffff;
+    --dt-composer-ring: #9a9a9a;
+    --dt-destructive: #a84040;
+    --dt-destructive-foreground: #fef2f2;
+    --dt-sidebar-bg: #0a0a0a;
+    --dt-sidebar-border: #202020;
+    --dt-user-bubble: #1a1a1a;
+    --dt-user-bubble-border: #363636;
 
     --dt-font-sans: 'Segoe WPC', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
     --dt-font-mono: 'Cascadia Code', 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
-    --dt-base-size: 1rem;
+    /* Root font size = the app's "actual size". The whole UI is rem-based, so
+       1.25rem (≈20px vs the 16px default) scales every surface up 1.25× at 100%
+       zoom — no Chromium zoom needed. `rem` on the root resolves against the
+       initial 16px, so this is a true 1.25× of the original design. */
+    --dt-base-size: 1.25rem;
     --dt-line-height: 1.5;
     --dt-letter-spacing: 0;
     --dt-spacing-mul: 1;
@@ -275,7 +211,7 @@
     /* Space under last message vs overlay composer — driven by the measured composer height (see composer/index.tsx). */
     --thread-last-message-clearance: calc(var(--composer-measured-height) + 2rem);
 
-    --composer-shell-pad-block-end: 0.625rem;
+    --composer-shell-pad-block-end: 1.25rem;
     --message-text-indent: 0.75rem;
     --conversation-text-font-size: 0.8125rem;
     --conversation-tool-font-size: var(--conversation-text-font-size);
@@ -283,7 +219,6 @@
     --conversation-line-height: 1.125rem;
     --conversation-caption-line-height: 1rem;
     --conversation-turn-gap: 0.375rem;
-    --sticky-human-top: 0.23rem;
     --file-tree-row-height: 1.375rem;
 
     --composer-width: 48.75rem;
@@ -291,7 +226,7 @@
     --composer-control-primary-size: 1.875rem;
     --composer-control-gap: 0.25rem;
     --composer-row-gap: 0.25rem;
-    --composer-ring-strength: 1;
+    --composer-ring-strength: 1.3;
     --composer-surface-pad-x: 0.5rem;
     --composer-surface-pad-y: 0.3125rem;
     --composer-input-min-height: 1.625rem;
@@ -322,42 +257,12 @@
     --sidebar-accent-foreground: var(--dt-accent-foreground);
     --sidebar-border: var(--dt-sidebar-border);
     --sidebar-ring: var(--dt-ring);
-    --sidebar-edge-border: color-mix(in srgb, var(--ui-base) 7.5%, transparent);
+    --sidebar-edge-border: #1c1c1c;
     --chrome-action-hover: var(--ui-control-hover-background);
 
     --midground: var(--dt-midground);
     --background: var(--dt-background);
     --foreground: var(--dt-foreground);
-
-    --warm-glow: color-mix(in srgb, var(--ui-warm) 32%, color-mix(in srgb, var(--ui-accent) 6%, transparent));
-    /* `--noise-opacity-mul` is set per-mode by `applyTheme()`. */
-    --noise-opacity-mul: 1;
-    --backdrop-invert-mul: 1;
-  }
-
-  :root.dark {
-    /* Per-mode mix knobs — overridden inline by `applyTheme()` per skin. */
-    --theme-mix-chrome: 74%;
-    --theme-mix-card: 38%;
-    --theme-mix-elevated: 46%;
-    --theme-mix-bubble: 46%;
-    --theme-neutral-chrome: #0d0d0e;
-    --theme-neutral-sidebar: #0a0a0b;
-    --theme-neutral-card: #161618;
-
-    /* Dark-only accent palette overrides. */
-    --ui-red: #e75e78;
-    --ui-green: #55a583;
-    --ui-cyan: #6f9ba6;
-
-    --sidebar-edge-border: color-mix(in srgb, var(--ui-base) 12%, transparent);
-    --composer-ring-strength: 1.3;
-    --backdrop-invert-mul: 0;
-
-    --ui-inline-code-background: color-mix(in srgb, #ffffff 7%, transparent);
-    --ui-inline-code-border: color-mix(in srgb, #ffffff 10%, transparent);
-    --ui-inline-code-foreground: color-mix(in srgb, #ffffff 88%, transparent);
-    --ui-selection-background: color-mix(in srgb, #ffd24a 38%, transparent);
   }
 
   * {
@@ -417,14 +322,6 @@
   background: repeating-conic-gradient(currentColor 0% 25%, transparent 0% 50%) 0 0 / 0.125rem 0.125rem;
 }
 
-:root:not([style*='--theme-asset-bg:']) .theme-default-filler {
-  display: block;
-}
-
-:root[style*='--theme-asset-bg:'] .theme-default-filler {
-  display: none;
-}
-
 /* Primitive-level pointer cursor for every interactive control (buttons,
    selects, menu items, switches, tabs, summaries). Keeps individual
    components from having to hardcode `cursor-pointer`; explicit cursor
@@ -461,6 +358,10 @@
 }
 
 .arc-border {
+  /* Animated "agent running" gradient border — removed (constant repaint/jank
+     and visually noisy). Kept as a no-op so the markup refs don't error. */
+  display: none;
+
   --arc-c0: color-mix(in srgb, var(--dt-foreground) 0%, transparent);
   --arc-c1: var(--dt-midground);
   --arc-c2: var(--dt-background);
@@ -505,7 +406,8 @@
 }
 
 .quest-glow {
-  animation: quest-glow 1.8s ease-in-out infinite;
+  /* Pulsing amber "needs you" glow removed — the static dot still marks the row. */
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -627,10 +529,8 @@ button {
 [data-slot='select-content'],
 [data-slot='dialog-content'] {
   border-color: var(--ui-stroke-secondary);
-  background: color-mix(in srgb, var(--ui-bg-elevated) 96%, transparent);
+  background: var(--ui-bg-elevated);
   box-shadow: var(--shadow-md);
-  backdrop-filter: blur(0.75rem) saturate(1.08);
-  -webkit-backdrop-filter: blur(0.75rem) saturate(1.08);
 }
 
 [data-slot='dropdown-menu-item']:focus,
@@ -676,27 +576,21 @@ canvas {
 .desktop-input-chrome {
   --ring-pct: 18%;
   --ring-fall: var(--dt-input);
-  background: color-mix(in srgb, var(--dt-card) 68%, transparent);
-  border-color: color-mix(
-    in srgb,
-    var(--dt-composer-ring) calc(var(--ring-pct) * var(--composer-ring-strength)),
-    var(--ring-fall)
-  );
+  background: var(--ui-bg-input);
+  border-color: var(--ring-fall);
   box-shadow: none;
-  transition:
-    background-color 200ms ease-out,
-    border-color 200ms ease-out;
 }
 
 .desktop-input-chrome:hover {
   --ring-pct: 30%;
-  background: color-mix(in srgb, var(--dt-card) 86%, transparent);
+  background: var(--ui-bg-input);
 }
 
 .desktop-input-chrome:focus {
   --ring-pct: 45%;
-  --ring-fall: transparent;
+  --ring-fall: var(--dt-ring);
   background: var(--dt-card);
+  border-color: var(--dt-ring);
   box-shadow: none;
   outline: none;
 }
@@ -798,46 +692,15 @@ canvas {
   font-size: inherit;
 }
 
-/* Streamed prose hangs slightly indented from the tool/todo column so the
-   reading column reads as a "reply" within the conversation gutter. Tools,
-   todos, and thinking blocks keep the existing --message-text-indent so they
-   remain flush with the user message text above them. */
+/* Assistant prose is flush-left with the tool/thinking blocks (no extra indent)
+   — they share the parent's --message-text-indent and the same left edge. */
 [data-slot='aui_assistant-message-content'] > .aui-md {
-  padding-inline-start: var(--md-text-indent, 0.5rem);
-}
-
-[data-slot='aui_user-message-root'] {
-  top: var(--sticky-human-top);
+  padding-inline-start: var(--md-text-indent, 0);
 }
 
 [data-slot='aui_user-message-root'],
 [data-slot='aui_edit-composer-root'] {
   font-size: var(--conversation-text-font-size);
-}
-
-/* Sticky human bubbles clamp to ~2 lines with a soft bottom fade so a long
-   prompt doesn't dominate the viewport while you read the response stuck
-   beneath it. The clamp lifts on hover / focus (clicking the bubble opens the
-   edit composer, which already shows the full text). --human-msg-full is the
-   measured content height (set in UserMessage) so expand/collapse animates to
-   the real height instead of overshooting the cap. */
-.sticky-human-clamp {
-  max-height: calc(2 * var(--dt-line-height) * var(--conversation-text-font-size) + 0.15rem);
-  overflow: hidden;
-  transition: max-height 0.08s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sticky-human-clamp[data-clamped='true'] {
-  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
-  mask-image: linear-gradient(to bottom, #000 55%, transparent);
-}
-
-.composer-human-message:hover .sticky-human-clamp,
-.composer-human-message:focus-within .sticky-human-clamp {
-  max-height: min(var(--human-msg-full, 24rem), 24rem);
-  overflow-y: auto;
-  -webkit-mask-image: none;
-  mask-image: none;
 }
 
 /* The thread renders items in natural document flow (padding spacers, not
@@ -942,7 +805,7 @@ canvas {
 }
 
 [data-slot='composer-surface'] {
-  border-color: var(--ui-stroke-secondary) !important;
+  border: none !important;
   box-shadow: var(--shadow-composer) !important;
 }
 
@@ -1015,13 +878,9 @@ canvas {
 }
 
 [data-slot='aui_assistant-message-content'] .aui-md [data-slot='code-card'][data-streaming='true'] {
-  animation:
-    code-card-stream-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) both,
-    code-card-stream-glow 1.8s ease-in-out 180ms infinite alternate;
+  /* Streaming code cards: no infinite glow pulse. A static border marks the
+     active card without the constant repaint. */
   border-color: color-mix(in srgb, var(--dt-ring) 24%, var(--ui-stroke-tertiary));
-  box-shadow:
-    0 0 0 0.0625rem color-mix(in srgb, var(--dt-ring) 10%, transparent),
-    0 0.625rem 1.75rem color-mix(in srgb, var(--dt-ring) 8%, transparent);
 }
 
 [data-slot='aui_assistant-message-content']
@@ -1033,7 +892,7 @@ canvas {
 }
 
 [data-slot='aui_assistant-message-content'] .aui-md :not(pre) > code {
-  border: 0.0625rem solid var(--ui-inline-code-border);
+  border: 0;
   background: var(--ui-inline-code-background);
   color: var(--ui-inline-code-foreground);
 }
@@ -1067,12 +926,6 @@ canvas {
 }
 
 [data-slot='aui_assistant-message-content'] > :is([data-slot='tool-block'], [data-slot='aui_thinking-disclosure']) {
-  opacity: 0.67;
-  transition: opacity 120ms ease-out;
-}
-
-[data-slot='aui_assistant-message-content']
-  > :is([data-slot='tool-block'], [data-slot='aui_thinking-disclosure']):is(:hover, :focus-within) {
   opacity: 1;
 }
 
@@ -1121,7 +974,7 @@ canvas {
   flex-shrink: 0;
   cursor: pointer;
   color: var(--color-muted-foreground);
-  opacity: 0.5;
+  opacity: 1;
 }
 
 [data-slot='aui_msg-actions'] button:disabled {
@@ -1155,36 +1008,3 @@ canvas {
   mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 100%);
 }
 
-@keyframes code-card-stream-enter {
-  from {
-    opacity: 0.74;
-    transform: translateY(0.375rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes code-card-stream-glow {
-  from {
-    border-color: color-mix(in srgb, var(--dt-ring) 18%, var(--ui-stroke-tertiary));
-    box-shadow:
-      0 0 0 0.0625rem color-mix(in srgb, var(--dt-ring) 6%, transparent),
-      0 0.5rem 1.5rem color-mix(in srgb, var(--dt-ring) 5%, transparent);
-  }
-
-  to {
-    border-color: color-mix(in srgb, var(--dt-ring) 32%, var(--ui-stroke-tertiary));
-    box-shadow:
-      0 0 0 0.0625rem color-mix(in srgb, var(--dt-ring) 12%, transparent),
-      0 0.75rem 2rem color-mix(in srgb, var(--dt-ring) 10%, transparent);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-slot='aui_assistant-message-content'] .aui-md [data-slot='code-card'][data-streaming='true'] {
-    animation: none;
-  }
-}

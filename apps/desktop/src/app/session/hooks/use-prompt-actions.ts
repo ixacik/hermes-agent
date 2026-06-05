@@ -78,7 +78,6 @@ interface PromptActionsOptions {
   busyRef: MutableRefObject<boolean>
   branchCurrentSession: () => Promise<boolean>
   createBackendSessionForSend: (preview?: string | null) => Promise<string | null>
-  handleSkinCommand: (arg: string) => string
   refreshSessions: () => Promise<void>
   requestGateway: <T>(method: string, params?: Record<string, unknown>) => Promise<T>
   selectedStoredSessionIdRef: MutableRefObject<string | null>
@@ -143,7 +142,6 @@ export function usePromptActions({
   busyRef,
   branchCurrentSession,
   createBackendSessionForSend,
-  handleSkinCommand,
   refreshSessions,
   requestGateway,
   selectedStoredSessionIdRef,
@@ -438,12 +436,6 @@ export function usePromptActions({
           return
         }
 
-        if (normalizedName === 'skin' && !sessionHint && !activeSessionIdRef.current) {
-          notify({ kind: 'success', message: handleSkinCommand(arg) })
-
-          return
-        }
-
         // /profile selects which profile new chats open in — no app relaunch.
         // A profile is per-session now, so an existing thread can't change its
         // profile mid-stream; `/profile <name>` instead points the next new chat
@@ -548,12 +540,6 @@ export function usePromptActions({
           return
         }
 
-        if (normalizedName === 'skin') {
-          renderSlashOutput(handleSkinCommand(arg))
-
-          return
-        }
-
         if (name === 'help' || name === 'commands') {
           try {
             const catalog = await requestGateway<CommandsCatalogLike>('commands.catalog', { session_id: sessionId })
@@ -647,7 +633,6 @@ export function usePromptActions({
       branchCurrentSession,
       busyRef,
       createBackendSessionForSend,
-      handleSkinCommand,
       refreshSessions,
       requestGateway,
       startFreshSessionDraft,

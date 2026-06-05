@@ -410,14 +410,14 @@ export function FeaturedProviderRow({
 
   return (
     <button
-      className="group relative flex w-full items-center justify-between gap-4 rounded-[8px] bg-primary/[0.06] px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
+      className="group relative flex w-full items-center justify-between gap-4 rounded-lg bg-(--ui-bg-selected) px-3 py-2.5 text-left transition-colors hover:bg-(--ui-bg-selected)"
       onClick={() => onSelect(provider)}
       type="button"
     >
       <span aria-hidden className="arc-border arc-reverse arc-nous" />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <img alt="" className="size-5 shrink-0 rounded" src={assetPath('apple-touch-icon.png')} />
+          <img alt="" className="size-5 shrink-0 rounded-lg" src={assetPath('apple-touch-icon.png')} />
           <span className="text-[length:var(--conversation-text-font-size)] font-semibold">
             {providerTitle(provider)}
           </span>
@@ -439,7 +439,7 @@ export function FeaturedProviderRow({
 
 function ConnectedTag() {
   return (
-    <span className="inline-flex items-center gap-1 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+    <span className="inline-flex items-center gap-1 bg-(--ui-bg-selected) px-2 py-0.5 text-xs font-medium text-primary">
       <Check className="size-3" />
       Connected
     </span>
@@ -449,7 +449,7 @@ function ConnectedTag() {
 export function KeyProviderRow({ onClick }: { onClick: () => void }) {
   return (
     <button
-      className="group flex w-full items-center justify-between gap-3 rounded-[6px] px-3 py-2.5 text-left transition-colors hover:bg-(--ui-control-hover-background)"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-(--ui-control-hover-background)"
       onClick={onClick}
       type="button"
     >
@@ -474,7 +474,7 @@ export function ProviderRow({
 
   return (
     <button
-      className="group flex w-full items-center justify-between gap-3 rounded-[6px] px-3 py-2.5 text-left transition-colors hover:bg-(--ui-control-hover-background)"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-(--ui-control-hover-background)"
       onClick={() => onSelect(provider)}
       type="button"
     >
@@ -587,8 +587,8 @@ export function ApiKeyForm({
         {options.map(o => (
           <button
             className={cn(
-              'rounded-2xl border bg-background/60 p-3 text-left transition hover:bg-accent/50',
-              option.id === o.id ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+              'rounded-2xl border bg-background p-3 text-left transition hover:bg-accent',
+              option.id === o.id ? 'border-primary ring-2 ring-[var(--dt-ring)]' : 'border-border'
             )}
             key={o.id}
             onClick={() => pick(o)}
@@ -657,7 +657,7 @@ function FlowPanel({ ctx, flow }: { ctx: OnboardingContext; flow: OnboardingFlow
 
   if (flow.status === 'success') {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+      <div className="flex items-center gap-2 rounded-2xl border border-(--dt-ring) bg-(--ui-bg-selected) px-4 py-3 text-sm text-primary">
         <Check className="size-4" />
         {title} connected. Picking a default model...
       </div>
@@ -671,7 +671,7 @@ function FlowPanel({ ctx, flow }: { ctx: OnboardingContext; flow: OnboardingFlow
   if (flow.status === 'error') {
     return (
       <div className="grid gap-3">
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-2xl border border-(--ui-border-error) bg-(--ui-bg-error) px-4 py-3 text-sm text-destructive">
           {flow.message || 'Sign-in failed. Try again.'}
         </div>
         <div className="flex justify-end">
@@ -787,7 +787,7 @@ function CodeBlock({
   text: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-secondary/30 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-secondary px-4 py-3">
       <code className={cn('font-mono', large ? 'text-2xl tracking-[0.4em]' : 'text-sm')}>{text}</code>
       <Button onClick={onCopy} size="sm" variant="outline">
         {copied ? <Check className="size-4" /> : 'Copy'}
@@ -843,12 +843,12 @@ function ConfirmingModelPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+      <div className="flex items-center gap-2 rounded-2xl border border-(--dt-ring) bg-(--ui-bg-selected) px-4 py-3 text-sm text-primary">
         <Check className="size-4 shrink-0" />
         <span>{flow.label} connected.</span>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-border bg-background/60 p-4">
+      <div className="grid gap-3 rounded-2xl border border-border bg-background p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -859,7 +859,7 @@ function ConfirmingModelPanel({
                 </span>
               )}
               {freeTier === false && (
-                <span className="rounded-sm bg-primary/15 px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-primary">
+                <span className="rounded-sm bg-(--ui-bg-selected) px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-primary">
                   Pro
                 </span>
               )}
@@ -920,7 +920,7 @@ function DocsLink({ children, href }: { children: React.ReactNode; href: string 
 
 function Status({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+    <div className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-6 text-sm text-muted-foreground">
       <Loader2 className="size-4 animate-spin" />
       {children}
     </div>

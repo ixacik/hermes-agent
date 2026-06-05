@@ -72,12 +72,12 @@ export function ComposerTriggerPopover({
         <CompletionDrawerEmpty title={loading ? 'Looking up…' : 'No matches.'}>
           {kind === '@' ? (
             <>
-              Try <span className="font-mono text-foreground/80">@file:</span> or{' '}
-              <span className="font-mono text-foreground/80">@folder:</span>.
+              Try <span className="font-mono text-(--ui-text-secondary)">@file:</span> or{' '}
+              <span className="font-mono text-(--ui-text-secondary)">@folder:</span>.
             </>
           ) : (
             <>
-              Try <span className="font-mono text-foreground/80">/help</span>.
+              Try <span className="font-mono text-(--ui-text-secondary)">/help</span>.
             </>
           )}
         </CompletionDrawerEmpty>

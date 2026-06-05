@@ -1,9 +1,11 @@
 import { useStore } from '@nanostores/react'
 import { useEffect, useState } from 'react'
 
+import { GatewayConnectionForm } from '@/app/settings/gateway-settings'
 import { Button } from '@/components/ui/button'
 import type { DesktopConnectionConfig } from '@/global'
 import { AlertTriangle, FileText, Loader2, LogIn, RefreshCw, Wrench } from '@/lib/icons'
+import { REMOTE_ONLY } from '@/lib/remote-only'
 import { $desktopBoot } from '@/store/boot'
 import { notify, notifyError } from '@/store/notifications'
 import { $desktopOnboarding } from '@/store/onboarding'
@@ -163,29 +165,47 @@ export function BootFailureOverlay() {
 
   const label = signInLabel(remoteReauth)
 
+  // Remote-only build that couldn't reach a gateway (first run / wrong URL /
+  // box offline). The overlay blocks the app, so Settings → Gateway is
+  // unreachable — render the SAME connection form inline so the user can set a
+  // gateway and connect right here. (Reauth has its own sign-in button.)
+  const showGatewayForm = REMOTE_ONLY && !remoteReauth
+
   return (
     <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-(--ui-chat-surface-background) p-6">
       <div className="w-full max-w-[40rem] overflow-hidden rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-chat-bubble-background) shadow-sm">
         <div className="flex items-start gap-3 border-b border-(--ui-stroke-tertiary) px-5 py-4">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-(--ui-bg-error) text-destructive">
             <AlertTriangle className="size-5" />
           </div>
           <div>
             <h2 className="text-[0.9375rem] font-semibold tracking-tight">
-              {remoteReauth ? 'Remote gateway sign-in required' : "Hermes couldn't start"}
+              {remoteReauth
+                ? 'Remote gateway sign-in required'
+                : showGatewayForm
+                  ? 'Connect to your gateway'
+                  : "Hermes couldn't start"}
             </h2>
             <p className="mt-1 text-[0.8125rem] leading-5 text-(--ui-text-tertiary)">
               {remoteReauth
                 ? 'Your remote gateway session has expired (the dashboard likely restarted). Sign in again to reconnect — nothing here deletes your chats or settings.'
-                : "The background gateway didn't come up. Try one of the recovery steps below — nothing here deletes your chats or settings."}
+                : showGatewayForm
+                  ? "This build only connects to a remote Hermes gateway. Point it at yours below, then Save and reconnect — nothing here deletes your chats or settings."
+                  : "The background gateway didn't come up. Try one of the recovery steps below — nothing here deletes your chats or settings."}
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 p-5">
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+          <div className="rounded-2xl border border-(--ui-border-error) bg-(--ui-bg-error) px-4 py-3 text-xs text-destructive">
             {boot.error}
           </div>
+
+          {showGatewayForm ? (
+            <div className="rounded-2xl border border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) px-4 py-3">
+              <GatewayConnectionForm hideDiagnostics />
+            </div>
+          ) : null}
 
           <div className="grid gap-2">
             <div className="flex flex-wrap gap-2">
@@ -200,16 +220,18 @@ export function BootFailureOverlay() {
                   Retry
                 </Button>
               )}
-              {!remoteReauth ? (
+              {!remoteReauth && !REMOTE_ONLY ? (
                 <Button disabled={Boolean(busy)} onClick={() => void repair()} variant="outline">
                   {busy === 'repair' ? <Loader2 className="size-4 animate-spin" /> : <Wrench className="size-4" />}
                   Repair install
                 </Button>
               ) : null}
-              <Button disabled={Boolean(busy)} onClick={() => void switchToLocalGateway()} variant="outline">
-                {busy === 'local' ? <Loader2 className="size-4 animate-spin" /> : null}
-                Use local gateway
-              </Button>
+              {REMOTE_ONLY ? null : (
+                <Button disabled={Boolean(busy)} onClick={() => void switchToLocalGateway()} variant="outline">
+                  {busy === 'local' ? <Loader2 className="size-4 animate-spin" /> : null}
+                  Use local gateway
+                </Button>
+              )}
               <Button onClick={openLogs} variant="ghost">
                 <FileText className="size-4" />
                 Open logs
@@ -217,8 +239,12 @@ export function BootFailureOverlay() {
             </div>
             <p className="text-xs text-muted-foreground">
               {remoteReauth
-                ? 'Opens the gateway login window. Use “Use local gateway” to switch to the bundled backend instead.'
-                : 'Repair re-runs the installer and can take a few minutes on a fresh machine.'}
+                ? REMOTE_ONLY
+                  ? 'Opens the gateway login window to re-establish your session.'
+                  : 'Opens the gateway login window. Use “Use local gateway” to switch to the bundled backend instead.'
+                : showGatewayForm
+                  ? 'Enter your gateway above and Save and reconnect. Retry re-attempts with the current settings.'
+                  : 'Repair re-runs the installer and can take a few minutes on a fresh machine.'}
             </p>
           </div>
 
@@ -232,7 +258,7 @@ export function BootFailureOverlay() {
                 {showLogs ? 'Hide' : 'Show'} recent logs
               </button>
               {showLogs ? (
-                <pre className="max-h-48 overflow-auto rounded-2xl border border-border bg-secondary/30 p-3 font-mono text-[0.7rem] leading-4 text-muted-foreground">
+                <pre className="max-h-48 overflow-auto rounded-2xl border border-border bg-secondary p-3 font-mono text-[0.7rem] leading-4 text-muted-foreground">
                   {logs.slice(-40).join('')}
                 </pre>
               ) : null}

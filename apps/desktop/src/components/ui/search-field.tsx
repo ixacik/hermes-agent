@@ -44,7 +44,7 @@ export function SearchField({
         containerClassName
       )}
     >
-      <Search className="pointer-events-none size-3.5 shrink-0 text-muted-foreground/70" />
+      <Search className="pointer-events-none size-3.5 shrink-0 text-muted-foreground" />
       <input
         aria-label={ariaLabel}
         className={cn(
@@ -61,11 +61,11 @@ export function SearchField({
       />
       {trailingAction}
       {loading ? (
-        <Loader2 className="pointer-events-none size-3.5 shrink-0 animate-spin text-muted-foreground/70" />
+        <Loader2 className="pointer-events-none size-3.5 shrink-0 animate-spin text-muted-foreground" />
       ) : value ? (
         <Button
           aria-label="Clear search"
-          className="shrink-0 text-muted-foreground/85 hover:bg-accent/60 hover:text-foreground"
+          className="shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={clear}
           size="icon-xs"
           variant="ghost"

@@ -99,7 +99,7 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
               />
             )
           })}
-          <div className="my-2 h-px bg-border/30" />
+          <div className="my-2 h-px bg-border" />
           <OverlayNavItem
             active={activeView === 'providers'}
             icon={Zap}
@@ -166,7 +166,7 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
             label="Archived Chats"
             onClick={() => setActiveView('sessions')}
           />
-          <div className="my-2 h-px bg-border/30" />
+          <div className="my-2 h-px bg-border" />
           <OverlayNavItem
             active={activeView === 'about'}
             icon={Info}

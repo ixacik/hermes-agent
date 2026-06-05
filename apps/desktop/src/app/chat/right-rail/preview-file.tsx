@@ -7,7 +7,7 @@ import type {
   ReactNode
 } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import ShikiHighlighter from 'react-shiki'
+import ShikiHighlighter from 'react-shiki/web'
 import { Streamdown } from 'streamdown'
 
 import { HERMES_PATHS_MIME } from '@/app/chat/hooks/use-composer-actions'
@@ -22,7 +22,7 @@ type EmptyStateTone = 'neutral' | 'warning'
 
 const TONE_STYLES: Record<EmptyStateTone, { cube: string; primary: string }> = {
   neutral: {
-    cube: 'text-muted-foreground/35',
+    cube: 'text-muted-foreground',
     primary: 'border-border bg-background text-foreground hover:bg-accent'
   },
   warning: {
@@ -101,7 +101,7 @@ export function PreviewEmptyState({
             )}
             {secondaryAction && (
               <button
-                className="text-[0.6875rem] font-medium text-muted-foreground underline decoration-current/20 underline-offset-4 transition-colors hover:text-foreground disabled:cursor-default disabled:text-muted-foreground/55 disabled:no-underline"
+                className="text-[0.6875rem] font-medium text-muted-foreground underline decoration-current underline-offset-4 transition-colors hover:text-foreground disabled:cursor-default disabled:text-muted-foreground disabled:no-underline"
                 disabled={secondaryAction.disabled}
                 onClick={secondaryAction.onClick}
                 type="button"
@@ -218,8 +218,8 @@ const MD_TAG_CLASSES = {
   h3: 'mb-2 mt-4 text-xl font-semibold leading-snug first:mt-0',
   h4: 'mb-2 mt-3 text-base font-semibold leading-snug first:mt-0',
   p: 'mb-4 leading-relaxed text-foreground last:mb-0',
-  ul: 'mb-4 list-disc pl-6 marker:text-muted-foreground/70 last:mb-0',
-  ol: 'mb-4 list-decimal pl-6 marker:text-muted-foreground/70 last:mb-0',
+  ul: 'mb-4 list-disc pl-6 marker:text-muted-foreground last:mb-0',
+  ol: 'mb-4 list-decimal pl-6 marker:text-muted-foreground last:mb-0',
   li: 'mt-1 leading-relaxed',
   blockquote: 'mb-4 border-l-2 border-border pl-3 text-muted-foreground italic last:mb-0',
   pre: 'mb-4 overflow-hidden rounded-lg border border-border bg-card font-mono text-xs leading-relaxed last:mb-0 [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent! [&_pre]:p-3 [&_pre]:font-mono'
@@ -246,7 +246,7 @@ function MarkdownCode({ className, children, ...props }: ComponentProps<'code'>)
     return (
       <code
         className={cn(
-          'rounded bg-muted px-1 py-0.5 font-mono text-[0.86em] text-pink-700 dark:text-pink-300',
+          'rounded-lg bg-muted px-1 py-0.5 font-mono text-[0.86em] text-pink-700 dark:text-pink-300',
           className
         )}
         {...props}
@@ -297,9 +297,9 @@ function MarkdownPreview({ text }: { text: string }) {
 
 function PreviewToggle({ asSource, onToggle }: { asSource: boolean; onToggle: () => void }) {
   return (
-    <div className="sticky top-0 z-10 flex justify-end border-b border-border/40 bg-transparent px-3 py-1 backdrop-blur">
+    <div className="sticky top-0 z-10 flex justify-end border-b border-border bg-transparent px-3 py-1">
       <button
-        className="text-[0.625rem] font-bold text-muted-foreground underline decoration-current/20 underline-offset-4 transition-colors hover:text-foreground"
+        className="text-[0.625rem] font-bold text-muted-foreground underline decoration-current underline-offset-4 transition-colors hover:text-foreground"
         onClick={onToggle}
         type="button"
       >
@@ -356,7 +356,7 @@ function SourceView({ filePath, language, text }: { filePath: string; language: 
 
   return (
     <div className="grid min-w-max grid-cols-[auto_minmax(0,1fr)] font-mono text-xs leading-relaxed">
-      <div className="select-none py-3 text-right text-muted-foreground/55">
+      <div className="select-none py-3 text-right text-muted-foreground">
         {Array.from({ length: lineCount }, (_, index) => {
           const line = index + 1
           const selected = inSelection(line)
@@ -531,7 +531,7 @@ export function LocalFilePreview({ reloadKey, target }: { reloadKey: number; tar
     return (
       <div className="h-full overflow-auto bg-transparent">
         {state.truncated && (
-          <div className="border-b border-border/60 bg-muted/35 px-3 py-1.5 text-[0.68rem] text-muted-foreground">
+          <div className="border-b border-border bg-muted px-3 py-1.5 text-[0.68rem] text-muted-foreground">
             Showing first 512 KB.
           </div>
         )}

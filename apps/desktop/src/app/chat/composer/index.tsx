@@ -15,7 +15,6 @@ import {
 
 import { hermesDirectiveFormatter } from '@/components/assistant-ui/directive-text'
 import { Button } from '@/components/ui/button'
-import { useMediaQuery } from '@/hooks/use-media-query'
 import { useResizeObserver } from '@/hooks/use-resize-observer'
 import { chatMessageText } from '@/lib/chat-messages'
 import { SLASH_COMMAND_RE } from '@/lib/chat-runtime'
@@ -67,19 +66,12 @@ import {
   renderComposerContents,
   RICH_INPUT_SLOT
 } from './rich-editor'
-import { SkinSlashPopover } from './skin-slash-popover'
+import { ComposerStatusControls } from './status-controls'
 import { detectTrigger, extractClipboardImageBlobs, textBeforeCaret, type TriggerState } from './text-utils'
 import { ComposerTriggerPopover } from './trigger-popover'
 import type { ChatBarProps } from './types'
 import { UrlDialog } from './url-dialog'
 import { VoiceActivity, VoicePlaybackActivity } from './voice-activity'
-
-const COMPOSER_STACK_BREAKPOINT_PX = 320
-
-// A single editor line is ~28px (--composer-input-min-height 1.625rem + 0.5rem
-// vertical padding). Anything taller means the text wrapped to a second line,
-// which is when the composer should expand to the stacked layout.
-const COMPOSER_SINGLE_LINE_MAX_PX = 36
 
 const COMPOSER_FADE_BACKGROUND =
   'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--dt-background) 10%, transparent))'
@@ -125,6 +117,7 @@ export function ChatBar({
   focusKey,
   gateway,
   maxRecordingSeconds = 120,
+  modelMenuContent,
   queueSessionKey,
   sessionId,
   state,
@@ -168,9 +161,7 @@ export function ChatBar({
 
   const [urlOpen, setUrlOpen] = useState(false)
   const [urlValue, setUrlValue] = useState('')
-  const [expanded, setExpanded] = useState(false)
   const [voiceConversationActive, setVoiceConversationActive] = useState(false)
-  const [tight, setTight] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [queueEdit, setQueueEdit] = useState<QueueEditState | null>(null)
   const [focusRequestId, setFocusRequestId] = useState(0)
@@ -178,12 +169,9 @@ export function ChatBar({
   const composingRef = useRef(false) // true during IME composition (CJK input)
   const lastSpokenIdRef = useRef<string | null>(null)
 
-  const narrow = useMediaQuery('(max-width: 30rem)')
-
   const at = useAtCompletions({ gateway: gateway ?? null, sessionId: sessionId ?? null, cwd: cwd ?? null })
   const slash = useSlashCompletions({ gateway: gateway ?? null })
 
-  const stacked = expanded || narrow || tight
   const hasComposerPayload = draft.trim().length > 0 || attachments.length > 0
   const canSubmit = busy || hasComposerPayload
   const editingQueuedPrompt = queueEdit ? (queuedPrompts.find(entry => entry.id === queueEdit.entryId) ?? null) : null
@@ -318,29 +306,6 @@ export function ChatBar({
     }
   }, [urlOpen])
 
-  // Expansion (input on its own full-width row, controls below) is driven by
-  // the editor's *actual* rendered height via the ResizeObserver in
-  // syncComposerMetrics — it only fires when the text genuinely wraps to a
-  // second line, so the layout flips exactly at the wrap point rather than at
-  // a guessed character count. We only handle the two cases the observer
-  // can't: an explicit newline (expand before layout settles) and an emptied
-  // draft (collapse back). We never read scrollHeight per keystroke.
-  useEffect(() => {
-    if (!draft) {
-      setExpanded(false)
-
-      return
-    }
-
-    if (expanded) {
-      return
-    }
-
-    if (draft.includes('\n')) {
-      setExpanded(true)
-    }
-  }, [draft, expanded])
-
   // Bucket measured heights so we only invalidate the global CSS var when
   // the size crosses a meaningful threshold. Without bucketing, the editor
   // grows ~1px per character → setProperty fires every keystroke → entire
@@ -350,7 +315,6 @@ export function ChatBar({
   // until a wrap or row change actually happens.
   const lastBucketedHeightRef = useRef(0)
   const lastBucketedSurfaceHeightRef = useRef(0)
-  const lastTightRef = useRef<boolean | null>(null)
 
   const syncComposerMetrics = useCallback(() => {
     const composer = composerRef.current
@@ -359,30 +323,9 @@ export function ChatBar({
       return
     }
 
-    const { height, width } = composer.getBoundingClientRect()
+    const { height } = composer.getBoundingClientRect()
     const surfaceHeight = composerSurfaceRef.current?.getBoundingClientRect().height
     const root = document.documentElement
-
-    if (width > 0) {
-      const nextTight = width < COMPOSER_STACK_BREAKPOINT_PX
-
-      if (nextTight !== lastTightRef.current) {
-        lastTightRef.current = nextTight
-        setTight(nextTight)
-      }
-    }
-
-    // Expand once the input has actually wrapped past a single line. The
-    // observer only fires on real size changes, so this reads scrollHeight at
-    // most once per wrap (not per keystroke). One line ≈ 28px (1.625rem
-    // min-height + padding); a second line clears ~36px. We only ever expand
-    // here — collapse is handled by the emptied-draft effect to avoid
-    // oscillating across the wrap boundary as the input switches widths.
-    const editor = editorRef.current
-
-    if (editor && editor.scrollHeight > COMPOSER_SINGLE_LINE_MAX_PX) {
-      setExpanded(true)
-    }
 
     if (height > 0) {
       const bucket = Math.round(height / 8) * 8
@@ -470,12 +413,6 @@ export function ChatBar({
       }
     })
   }, [])
-
-  const selectSkinSlashCommand = (command: string) => {
-    draftRef.current = command
-    aui.composer().setText(command)
-    requestMainFocus()
-  }
 
   const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
     const imageBlobs = extractClipboardImageBlobs(event.clipboardData)
@@ -1203,7 +1140,6 @@ export function ChatBar({
         status: conversation.status
       }}
       disabled={disabled}
-      hasComposerPayload={hasComposerPayload}
       onDictate={dictate}
       state={state}
       voiceStatus={voiceStatus}
@@ -1211,17 +1147,15 @@ export function ChatBar({
   )
 
   const input = (
-    <div className={cn('relative', stacked ? 'w-full' : 'min-w-(--composer-input-inline-min-width) flex-1')}>
+    <div className="relative w-full">
       <div
         aria-label="Message"
         autoCapitalize="off"
         autoCorrect="off"
         className={cn(
-          'min-h-(--composer-input-min-height) max-h-(--composer-input-max-height) overflow-y-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] bg-transparent pb-1 pr-1 pt-1 leading-normal text-foreground outline-none disabled:cursor-not-allowed',
-          'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/60',
-          '**:data-ref-text:cursor-default',
-          stacked && 'pl-3',
-          stacked ? 'w-full' : 'min-w-(--composer-input-inline-min-width) flex-1'
+          'min-h-(--composer-input-min-height) max-h-(--composer-input-max-height) w-full overflow-y-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] bg-transparent pb-1 pr-3 pt-1 pl-[calc((var(--composer-control-size)-1rem)/2)] leading-normal text-foreground outline-none disabled:cursor-not-allowed',
+          'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground',
+          '**:data-ref-text:cursor-default'
         )}
         contentEditable={!disabled}
         data-placeholder={placeholder}
@@ -1301,7 +1235,6 @@ export function ChatBar({
               onPick={replaceTriggerWithChip}
             />
           )}
-          <SkinSlashPopover draft={draft} onSelect={selectSkinSlashCommand} />
           {activeQueueSessionKey && queuedPrompts.length > 0 && (
             <div className="relative z-6 mb-1 px-0.5">
               <QueuePanel
@@ -1325,11 +1258,9 @@ export function ChatBar({
           <div className="relative w-full rounded-[inherit]">
             <div
               className={cn(
-                'relative z-4 isolate rounded-[inherit] border border-[color-mix(in_srgb,var(--dt-composer-ring)_calc(18%*var(--composer-ring-strength)),var(--dt-input))] shadow-composer transition-[border-color,box-shadow] duration-200 ease-out',
+                'relative z-4 isolate rounded-[inherit] shadow-composer transition-[box-shadow] duration-200 ease-out',
                 COMPOSER_DROP_FADE_CLASS,
-                'group-focus-within/composer:border-[color-mix(in_srgb,var(--dt-composer-ring)_calc(45%*var(--composer-ring-strength)),transparent)] group-focus-within/composer:shadow-composer-focus',
-                'group-has-data-[state=open]/composer:border-t-transparent',
-                'group-has-data-[state=open]/composer:shadow-[0_0.0625rem_0_0.0625rem_color-mix(in_srgb,var(--dt-composer-ring)_calc(35%*var(--composer-ring-strength)),transparent),0_0.5rem_1.5rem_color-mix(in_srgb,var(--shadow-ink)_6%,transparent)]',
+                'group-focus-within/composer:shadow-composer-focus',
                 dragActive && COMPOSER_DROP_ACTIVE_CLASS
               )}
               data-slot="composer-surface"
@@ -1339,12 +1270,8 @@ export function ChatBar({
                 aria-hidden
                 className={cn(
                   'pointer-events-none absolute inset-0 -z-10 rounded-[inherit]',
-                  'bg-[color-mix(in_srgb,var(--dt-card)_72%,transparent)]',
-                  'backdrop-blur-[0.75rem] backdrop-saturate-[1.12]',
-                  '[-webkit-backdrop-filter:blur(0.75rem)_saturate(1.12)]',
-                  'transition-[background-color] duration-150 ease-out',
-                  'group-data-[thread-scrolled-up]/composer:bg-[color-mix(in_srgb,var(--dt-card)_48%,transparent)]',
-                  'group-focus-within/composer:bg-[color-mix(in_srgb,var(--dt-card)_85%,transparent)]'
+                  'bg-(--ui-chat-bubble-background)',
+                  'transition-[background-color] duration-150 ease-out'
                 )}
               />
               <div
@@ -1359,8 +1286,8 @@ export function ChatBar({
                 <VoiceActivity state={voiceActivityState} />
                 <VoicePlaybackActivity />
                 {queueEdit && editingQueuedPrompt && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg border border-[color-mix(in_srgb,var(--dt-composer-ring)_32%,transparent)] bg-accent/18 px-2 py-1">
-                    <div className="min-w-0 text-[0.7rem] text-muted-foreground/88">
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-(--dt-ring) bg-accent px-2 py-1">
+                    <div className="min-w-0 text-[0.7rem] text-muted-foreground">
                       Editing queued turn in composer
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
@@ -1383,17 +1310,23 @@ export function ChatBar({
                   </div>
                 )}
                 {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}
-                <div
-                  className={cn(
-                    'grid w-full',
-                    stacked
-                      ? 'grid-cols-[auto_1fr] gap-(--composer-row-gap) [grid-template-areas:"input_input"_"menu_controls"]'
-                      : 'grid-cols-[auto_1fr_auto] items-center gap-(--composer-control-gap) [grid-template-areas:"menu_input_controls"]'
-                  )}
-                >
-                  <div className="flex items-center [grid-area:menu]">{contextMenu}</div>
-                  <div className="min-w-0 [grid-area:input]">{input}</div>
-                  <div className="flex items-center justify-end [grid-area:controls]">{controls}</div>
+                {/* Codex-style layout: the input always sits on its own
+                    full-width row, with the control bar (add menu + status
+                    controls + mic/send) in a horizontal flex row beneath it. */}
+                <div className="flex w-full flex-col gap-(--composer-row-gap)">
+                  <div className="min-w-0">{input}</div>
+                  <div className="flex w-full min-w-0 items-center gap-(--composer-control-gap)">
+                    <div className="flex shrink-0 items-center">{contextMenu}</div>
+                    <div className="flex min-w-0 flex-1 items-center justify-end gap-(--composer-control-gap)">
+                      <ComposerStatusControls
+                        disabled={disabled}
+                        gateway={gateway}
+                        modelMenuContent={modelMenuContent}
+                        sessionId={sessionId}
+                      />
+                      {controls}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1422,17 +1355,17 @@ export function ChatBarFallback() {
       )}
       data-slot="composer-root"
     >
-      <div className="composer-fallback-surface relative isolate h-(--composer-fallback-height) w-full rounded-[inherit] border border-[color-mix(in_srgb,var(--dt-composer-ring)_calc(18%*var(--composer-ring-strength)),var(--dt-input))] shadow-composer">
+      <div className="composer-fallback-surface relative isolate h-(--composer-fallback-height) w-full rounded-[inherit] border border-(--dt-ring) shadow-composer">
         <div
           aria-hidden
           className={cn(
             'pointer-events-none absolute inset-0 -z-10 rounded-[inherit]',
-            'bg-[color-mix(in_srgb,var(--dt-card)_72%,transparent)]',
-            'backdrop-blur-[0.75rem] backdrop-saturate-[1.12]',
-            '[-webkit-backdrop-filter:blur(0.75rem)_saturate(1.12)]',
+            'bg-card',
+            '-[0.75rem]',
+            '',
             'transition-[background-color] duration-150 ease-out',
-            'group-data-[thread-scrolled-up]/composer:bg-[color-mix(in_srgb,var(--dt-card)_48%,transparent)]',
-            'group-focus-within/composer:bg-[color-mix(in_srgb,var(--dt-card)_85%,transparent)]'
+            'group-data-[thread-scrolled-up]/composer:bg-card',
+            'group-focus-within/composer:bg-card'
           )}
         />
       </div>

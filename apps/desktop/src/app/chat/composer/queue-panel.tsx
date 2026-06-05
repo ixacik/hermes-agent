@@ -27,9 +27,9 @@ export function QueuePanel({ busy, editingId, entries, onDelete, onEdit, onSendN
   }
 
   return (
-    <div className="rounded-2xl border border-border/65 bg-[color-mix(in_srgb,var(--dt-card)_70%,transparent)] py-0.5 shadow-[0_0_0_1px_color-mix(in_srgb,var(--dt-card)_30%,transparent)_inset]">
+    <div className="rounded-2xl border border-border bg-card py-0.5 shadow-[0_0_0_1px_color-mix(in_srgb,var(--dt-card)_30%,transparent)_inset]">
       <button
-        className="flex w-full items-center gap-1.5 px-2.5 py-1 text-left text-[0.72rem] font-medium text-muted-foreground/92 transition-colors hover:text-foreground/90"
+        className="flex w-full items-center gap-1.5 px-2.5 py-1 text-left text-[0.72rem] font-medium text-muted-foreground transition-colors hover:text-(--ui-text-secondary)"
         onClick={() => setCollapsed(open => !open)}
         type="button"
       >
@@ -48,18 +48,18 @@ export function QueuePanel({ busy, editingId, entries, onDelete, onEdit, onSendN
                 className={cn(
                   'group/queue-row flex items-center gap-1.5 rounded-lg border border-transparent px-1.5 py-1',
                   'transition-colors duration-300 ease-out hover:bg-(--chrome-action-hover) hover:transition-none',
-                  isEditing && 'border-[color-mix(in_srgb,var(--dt-composer-ring)_40%,transparent)] bg-accent/25'
+                  isEditing && 'border-(--dt-ring) bg-accent'
                 )}
                 key={entry.id}
               >
                 <span
                   aria-hidden
-                  className="h-3.5 w-3.5 shrink-0 rounded-full border border-foreground/35 bg-transparent"
+                  className="h-3.5 w-3.5 shrink-0 rounded-full border border-(--ui-stroke-primary) bg-transparent"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[0.73rem] leading-4 text-foreground/92">{entryPreview(entry)}</p>
+                  <p className="truncate text-[0.73rem] leading-4 text-(--ui-text-secondary)">{entryPreview(entry)}</p>
                   {(attachmentsCount > 0 || isEditing) && (
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[0.64rem] text-muted-foreground/75">
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[0.64rem] text-muted-foreground">
                       {attachmentsCount > 0 && (
                         <span>
                           {attachmentsCount} attachment{attachmentsCount === 1 ? '' : 's'}

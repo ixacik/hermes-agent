@@ -278,7 +278,7 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
                           <button
                             aria-expanded={expanded}
                             aria-label={`Configure ${label}`}
-                            className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                            className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             onClick={() =>
                               setExpandedToolset(current => (current === toolset.name ? null : toolset.name))
                             }

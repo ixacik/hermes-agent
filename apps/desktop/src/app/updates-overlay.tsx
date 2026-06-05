@@ -78,7 +78,7 @@ export function UpdatesOverlay() {
   return (
     <Dialog onOpenChange={handleClose} open={open}>
       <DialogContent
-        className="max-w-sm overflow-hidden border-border/70 p-0 gap-0"
+        className="max-w-sm overflow-hidden border-border p-0 gap-0"
         showCloseButton={phase !== 'applying'}
       >
         {phase === 'applying' && <ApplyingView apply={apply} />}
@@ -186,7 +186,7 @@ function IdleView({
   return (
     <div className="grid gap-5 px-6 pb-6 pt-7 pr-8">
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-(--ui-bg-selected) text-primary">
           <Sparkles className="size-7" />
         </span>
 
@@ -196,7 +196,7 @@ function IdleView({
         </DialogDescription>
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+      <div className="grid gap-3 rounded-xl border border-border bg-muted px-4 py-3">
         {groups.map(group => (
           <div key={group.id}>
             <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>
@@ -247,7 +247,7 @@ function ManualView({ command, onDone }: { command: string; onDone: () => void }
   return (
     <div className="grid gap-5 px-6 pb-6 pt-7 pr-8">
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-(--ui-bg-selected) text-primary">
           <Terminal className="size-7" />
         </span>
 
@@ -258,7 +258,7 @@ function ManualView({ command, onDone }: { command: string; onDone: () => void }
       </div>
 
       <button
-        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-left transition-colors hover:border-border hover:bg-muted/50"
+        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-left transition-colors hover:border-border hover:bg-muted"
         onClick={handleCopy}
         type="button"
       >
@@ -303,7 +303,7 @@ function ApplyingView({ apply }: { apply: UpdateApplyState }) {
   return (
     <div className="grid gap-5 px-6 pb-6 pt-7">
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="relative flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="relative flex size-14 items-center justify-center rounded-2xl bg-(--ui-bg-selected) text-primary">
           <Loader2 className="size-7 animate-spin" />
         </span>
 
@@ -365,7 +365,7 @@ function CenteredStatus({
   return (
     <div className="grid gap-4 px-6 pb-6 pt-8 pr-8">
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-muted/40">{icon}</span>
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-muted">{icon}</span>
 
         <DialogTitle className="text-center text-lg">{title}</DialogTitle>
         {body && <DialogDescription className="text-center text-sm">{body}</DialogDescription>}

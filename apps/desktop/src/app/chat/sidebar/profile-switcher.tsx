@@ -236,7 +236,7 @@ export function ProfileRail() {
         <Tip label="New profile">
           <button
             aria-label="New profile"
-            className="grid size-5 shrink-0 place-items-center rounded-[3px] text-(--ui-text-tertiary) opacity-55 transition hover:bg-(--ui-control-hover-background) hover:text-foreground hover:opacity-100"
+            className="grid size-5 shrink-0 place-items-center rounded-lg text-(--ui-text-tertiary) opacity-55 transition hover:bg-(--ui-control-hover-background) hover:text-foreground hover:opacity-100"
             onClick={() => setCreateOpen(true)}
             type="button"
           >
@@ -292,8 +292,11 @@ function ProfilePill({ active, glyph, label, onSelect }: ProfilePillProps) {
         aria-label={label}
         aria-pressed={active}
         className={cn(
-          'bg-transparent text-(--ui-text-tertiary) hover:bg-(--ui-control-hover-background) hover:text-foreground',
-          active && 'bg-(--ui-control-active-background) text-foreground'
+          // Selection shows in the icon (it brightens to foreground), not a
+          // persistent fill. The background box is hover-only for every pill,
+          // selected or not.
+          'bg-transparent hover:bg-(--ui-control-hover-background)',
+          active ? 'text-foreground' : 'text-(--ui-text-tertiary) hover:text-foreground'
         )}
         onClick={onSelect}
         size="icon-xs"
@@ -374,7 +377,7 @@ function ProfileSquare({ active, color, label, onDelete, onRecolor, onRename, on
                 <TooltipTrigger asChild>
                   <button
                     className={cn(
-                      'grid size-5 shrink-0 cursor-grab touch-none select-none place-items-center rounded-[3px] text-[0.5625rem] font-semibold uppercase leading-none transition-opacity hover:opacity-100',
+                      'grid size-5 shrink-0 cursor-grab touch-none select-none place-items-center rounded-lg text-[0.5625rem] font-semibold uppercase leading-none transition-opacity hover:opacity-100',
                       active ? 'opacity-100' : 'opacity-55',
                       isDragging && 'z-10 cursor-grabbing opacity-100'
                     )}

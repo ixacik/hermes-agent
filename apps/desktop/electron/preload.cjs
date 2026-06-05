@@ -77,6 +77,11 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     ipcRenderer.on('hermes:open-updates', listener)
     return () => ipcRenderer.removeListener('hermes:open-updates', listener)
   },
+  onMenuAction: callback => {
+    const listener = (_event, action) => callback(action)
+    ipcRenderer.on('hermes:menu-action', listener)
+    return () => ipcRenderer.removeListener('hermes:menu-action', listener)
+  },
   onWindowStateChanged: callback => {
     const listener = (_event, payload) => callback(payload)
     ipcRenderer.on('hermes:window-state-changed', listener)

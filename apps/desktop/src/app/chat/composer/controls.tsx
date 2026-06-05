@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { Tip } from '@/components/ui/tooltip'
 import { triggerHaptic } from '@/lib/haptics'
-import { AudioLines, Layers3, Loader2, Square } from '@/lib/icons'
+import { Layers3, Loader2, Square } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 import type { ConversationStatus } from './hooks/use-voice-conversation'
@@ -19,8 +19,8 @@ export const GHOST_ICON_BTN = cn(
 // neutral and lets the action visually dominate the row.
 export const PRIMARY_ICON_BTN = cn(
   'size-(--composer-control-primary-size,var(--composer-control-size)) shrink-0 rounded-full p-0',
-  'bg-foreground text-background hover:bg-foreground/90',
-  'disabled:bg-foreground/30 disabled:text-background disabled:opacity-100'
+  'bg-foreground text-background hover:bg-(--ui-bg-selected)',
+  'disabled:bg-(--ui-bg-selected) disabled:text-background disabled:opacity-100'
 )
 
 interface ConversationProps {
@@ -40,7 +40,6 @@ export function ComposerControls({
   canSubmit,
   conversation,
   disabled,
-  hasComposerPayload,
   state,
   voiceStatus,
   onDictate
@@ -50,7 +49,6 @@ export function ComposerControls({
   canSubmit: boolean
   conversation: ConversationProps
   disabled: boolean
-  hasComposerPayload: boolean
   state: ChatBarState
   voiceStatus: VoiceStatus
   onDictate: () => void
@@ -59,40 +57,26 @@ export function ComposerControls({
     return <ConversationPill {...conversation} disabled={disabled} />
   }
 
-  const showVoicePrimary = !busy && !hasComposerPayload
+  // Only surface the primary action when there's something to do: a payload to
+  // send, or a running turn to stop/queue against. An empty, idle composer
+  // shows no circle at all (a disabled CTA reads as broken).
+  const showPrimary = canSubmit && !disabled
 
   return (
     <div className="ml-auto flex shrink-0 items-center gap-(--composer-control-gap)">
       <DictationButton disabled={disabled} onToggle={onDictate} state={state.voice} status={voiceStatus} />
-      {showVoicePrimary ? (
-        <Tip label="Start voice conversation">
-          <Button
-            aria-label="Start voice conversation"
-            className={PRIMARY_ICON_BTN}
-            disabled={disabled}
-            onClick={() => {
-              triggerHaptic('open')
-              conversation.onStart()
-            }}
-            size="icon"
-            type="button"
-          >
-            <AudioLines size={17} />
-          </Button>
-        </Tip>
-      ) : (
+      {showPrimary && (
         <Tip label={busy ? (busyAction === 'queue' ? 'Queue message' : 'Stop') : 'Send'}>
           <Button
             aria-label={busy ? (busyAction === 'queue' ? 'Queue message' : 'Stop') : 'Send'}
             className={PRIMARY_ICON_BTN}
-            disabled={disabled || !canSubmit}
             type="submit"
           >
             {busy ? (
               busyAction === 'queue' ? (
                 <Layers3 size={16} />
               ) : (
-                <span className="block size-3 rounded-[0.1875rem] bg-current" />
+                <span className="block size-3 rounded-lg bg-current" />
               )
             ) : (
               <Codicon name="arrow-up" size="1rem" />
@@ -164,7 +148,7 @@ function ConversationPill({
       )}
       <Button
         aria-label="End voice conversation"
-        className="h-(--composer-control-size) gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        className="h-(--composer-control-size) gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-(--ui-bg-selected)"
         disabled={disabled}
         onClick={() => {
           triggerHaptic('close')
@@ -234,8 +218,8 @@ function DictationButton({
           GHOST_ICON_BTN,
           'p-0',
           'data-[active=true]:bg-accent data-[active=true]:text-foreground',
-          status === 'recording' && 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
-          status === 'transcribing' && 'bg-primary/10 text-primary'
+          status === 'recording' && 'bg-(--ui-bg-selected) text-primary hover:bg-(--ui-bg-selected) hover:text-primary',
+          status === 'transcribing' && 'bg-(--ui-bg-selected) text-primary'
         )}
         data-active={active}
         disabled={disabled || !state.enabled || status === 'transcribing'}

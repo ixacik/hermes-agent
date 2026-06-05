@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { DesktopAuthProvider, DesktopConnectionProbeResult } from '@/global'
 import { AlertCircle, Check, FileText, Globe, Loader2, LogIn, Monitor } from '@/lib/icons'
+import { REMOTE_ONLY } from '@/lib/remote-only'
 import { cn } from '@/lib/utils'
 import { notify, notifyError } from '@/store/notifications'
 
@@ -26,7 +27,8 @@ interface GatewaySettingsState {
 
 const EMPTY_STATE: GatewaySettingsState = {
   envOverride: false,
-  mode: 'local',
+  // Remote-only fork: there is no local gateway, so start in (and stay in) remote.
+  mode: REMOTE_ONLY ? 'remote' : 'local',
   remoteAuthMode: 'token',
   remoteOauthConnected: false,
   remoteTokenPreview: null,
@@ -74,7 +76,13 @@ function ModeCard({
   )
 }
 
-export function GatewaySettings() {
+// The gateway connection form, minus any page chrome. Extracted from
+// GatewaySettings so the boot-failure overlay can render the SAME controls
+// inline — a remote-only build that can't reach a gateway must let the user set
+// one without first reaching Settings (which the overlay blocks). Pass
+// `hideDiagnostics` to drop the bottom "Open logs" row when the host already
+// surfaces logs (the overlay does).
+export function GatewayConnectionForm({ hideDiagnostics = false }: { hideDiagnostics?: boolean } = {}) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -386,7 +394,7 @@ export function GatewaySettings() {
   }
 
   return (
-    <SettingsContent>
+    <>
       <div className="mb-5">
         <div className="flex items-center gap-2 text-[length:var(--conversation-text-font-size)] font-medium">
           <Globe className="size-4 text-muted-foreground" />
@@ -394,13 +402,14 @@ export function GatewaySettings() {
           {state.envOverride ? <Pill tone="primary">env override</Pill> : null}
         </div>
         <p className="mt-2 max-w-2xl text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-          Hermes Desktop starts its own local gateway by default. Use a remote gateway when you want this app to control
-          an already-running Hermes backend on another machine or behind a trusted proxy.
+          {REMOTE_ONLY
+            ? 'This is a remote-only build. Point it at a Hermes gateway running on another machine or behind a trusted proxy — it never starts a local backend.'
+            : 'Hermes Desktop starts its own local gateway by default. Use a remote gateway when you want this app to control an already-running Hermes backend on another machine or behind a trusted proxy.'}
         </p>
       </div>
 
       {state.envOverride ? (
-        <div className="mb-5 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-[length:var(--conversation-caption-font-size)] text-destructive">
+        <div className="mb-5 flex items-start gap-2 rounded-xl border border-(--ui-border-error) bg-(--ui-bg-error) px-3 py-2.5 text-[length:var(--conversation-caption-font-size)] text-destructive">
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <div>
             <div className="font-medium">Environment variables are controlling this desktop session.</div>
@@ -412,24 +421,26 @@ export function GatewaySettings() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ModeCard
-          active={state.mode === 'local'}
-          description="Start a private Hermes backend on localhost. This is the default and works offline."
-          disabled={state.envOverride}
-          icon={Monitor}
-          onSelect={() => setState(current => ({ ...current, mode: 'local' }))}
-          title="Local gateway"
-        />
-        <ModeCard
-          active={state.mode === 'remote'}
-          description="Connect this desktop shell to a remote Hermes backend. Hosted gateways use OAuth or a username and password; self-hosted ones may use a session token."
-          disabled={state.envOverride}
-          icon={Globe}
-          onSelect={() => setState(current => ({ ...current, mode: 'remote' }))}
-          title="Remote gateway"
-        />
-      </div>
+      {REMOTE_ONLY ? null : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ModeCard
+            active={state.mode === 'local'}
+            description="Start a private Hermes backend on localhost. This is the default and works offline."
+            disabled={state.envOverride}
+            icon={Monitor}
+            onSelect={() => setState(current => ({ ...current, mode: 'local' }))}
+            title="Local gateway"
+          />
+          <ModeCard
+            active={state.mode === 'remote'}
+            description="Connect this desktop shell to a remote Hermes backend. Hosted gateways use OAuth or a username and password; self-hosted ones may use a session token."
+            disabled={state.envOverride}
+            icon={Globe}
+            onSelect={() => setState(current => ({ ...current, mode: 'remote' }))}
+            title="Remote gateway"
+          />
+        </div>
+      )}
 
       <div className="mt-5 grid gap-1">
         <ListRow
@@ -538,18 +549,30 @@ export function GatewaySettings() {
         </Button>
       </div>
 
-      <div className="mt-6 grid gap-1">
-        <ListRow
-          action={
-            <Button onClick={() => void window.hermesDesktop?.revealLogs()} size="sm" variant="textStrong">
-              <FileText className="size-4" />
-              Open logs
-            </Button>
-          }
-          description="Reveal desktop.log in your file manager — useful when the gateway fails to start."
-          title="Diagnostics"
-        />
-      </div>
+      {hideDiagnostics ? null : (
+        <div className="mt-6 grid gap-1">
+          <ListRow
+            action={
+              <Button onClick={() => void window.hermesDesktop?.revealLogs()} size="sm" variant="textStrong">
+                <FileText className="size-4" />
+                Open logs
+              </Button>
+            }
+            description="Reveal desktop.log in your file manager — useful when the gateway fails to start."
+            title="Diagnostics"
+          />
+        </div>
+      )}
+    </>
+  )
+}
+
+// Settings-page host: wraps the connection form in the standard scrollable page
+// chrome. The form itself is shared with the boot-failure overlay.
+export function GatewaySettings() {
+  return (
+    <SettingsContent>
+      <GatewayConnectionForm />
     </SettingsContent>
   )
 }

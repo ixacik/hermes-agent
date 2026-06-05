@@ -24,6 +24,7 @@ const net = require('node:net')
 const path = require('node:path')
 const { fileURLToPath, pathToFileURL } = require('node:url')
 const { execFileSync, spawn } = require('node:child_process')
+const { REMOTE_ONLY, REMOTE_ONLY_NO_GATEWAY_MSG } = require('./remote-only.cjs')
 const { detectRemoteDisplay, isWindowsBinaryPathInWsl, isWslEnvironment } = require('./bootstrap-platform.cjs')
 const { runBootstrap } = require('./bootstrap-runner.cjs')
 const { canImportHermesCli, verifyHermesCli } = require('./backend-probes.cjs')
@@ -230,6 +231,13 @@ const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.j
 // ~/.hermes/active_profile file. Unset (null) preserves the legacy behavior:
 // no --profile flag, so the backend honors active_profile / default.
 const DESKTOP_PROFILE_CONFIG_PATH = path.join(app.getPath('userData'), 'active-profile.json')
+const DESKTOP_ZOOM_CONFIG_PATH = path.join(app.getPath('userData'), 'zoom.json')
+// First-run Chromium zoom level (factor = 1.2 ** level). The comfortable base
+// size is baked into the CSS root font-size (--dt-base-size: 1.5rem), so the
+// default zoom is a true 100% — Cmd +/-/0 adjustments are persisted on top.
+const DEFAULT_ZOOM_LEVEL = 0
+const ZOOM_LEVEL_MIN = -3
+const ZOOM_LEVEL_MAX = 9
 // Mirrors hermes_cli.profiles._PROFILE_ID_RE so we never hand the backend a
 // value its profile resolver would reject and exit on.
 const PROFILE_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -2817,6 +2825,15 @@ function sendOpenUpdatesRequested() {
   mainWindow.focus()
 }
 
+function sendMenuAction(action) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const { webContents } = mainWindow
+  if (!webContents || webContents.isDestroyed()) return
+  webContents.send('hermes:menu-action', action)
+  if (!mainWindow.isVisible()) mainWindow.show()
+  mainWindow.focus()
+}
+
 function sendWindowStateChanged(nextIsFullscreen) {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const { webContents } = mainWindow
@@ -2886,6 +2903,26 @@ function buildApplicationMenu() {
     ]
   })
   template.push({
+    label: 'Go',
+    submenu: [
+      {
+        label: 'Command Center',
+        accelerator: 'CommandOrControl+Shift+K',
+        click: () => sendMenuAction('command-center')
+      },
+      {
+        label: 'Agents',
+        accelerator: 'CommandOrControl+Shift+A',
+        click: () => sendMenuAction('agents')
+      },
+      {
+        label: 'Cron Jobs',
+        accelerator: 'CommandOrControl+Shift+J',
+        click: () => sendMenuAction('cron')
+      }
+    ]
+  })
+  template.push({
     label: 'View',
     submenu: [
       { role: 'reload' },
@@ -2895,17 +2932,14 @@ function buildApplicationMenu() {
       {
         label: 'Actual Size',
         accelerator: 'CommandOrControl+0',
-        click: () => {
-          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomLevel(0)
-        }
+        click: () => applyDesktopZoom(mainWindow, 0)
       },
       {
         label: 'Zoom In',
         accelerator: 'CommandOrControl+Plus',
         click: () => {
           if (mainWindow && !mainWindow.isDestroyed()) {
-            const next = Math.min(mainWindow.webContents.getZoomLevel() + 0.1, 9)
-            mainWindow.webContents.setZoomLevel(next)
+            applyDesktopZoom(mainWindow, mainWindow.webContents.getZoomLevel() + 0.1)
           }
         }
       },
@@ -2914,8 +2948,7 @@ function buildApplicationMenu() {
         accelerator: 'CommandOrControl+-',
         click: () => {
           if (mainWindow && !mainWindow.isDestroyed()) {
-            const next = Math.max(mainWindow.webContents.getZoomLevel() - 0.1, -9)
-            mainWindow.webContents.setZoomLevel(next)
+            applyDesktopZoom(mainWindow, mainWindow.webContents.getZoomLevel() - 0.1)
           }
         }
       },
@@ -2977,12 +3010,54 @@ function installPreviewShortcut(window) {
   })
 }
 
+function clampZoomLevel(level) {
+  if (!Number.isFinite(level)) return DEFAULT_ZOOM_LEVEL
+  return Math.min(Math.max(level, ZOOM_LEVEL_MIN), ZOOM_LEVEL_MAX)
+}
+
+// Saved zoom level (Electron resets zoom on every navigation, so we persist it
+// ourselves and re-apply on load). First run / missing file → DEFAULT_ZOOM_LEVEL.
+function readDesktopZoomLevel() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(DESKTOP_ZOOM_CONFIG_PATH, 'utf8'))
+    if (parsed && Number.isFinite(Number(parsed.level))) {
+      return clampZoomLevel(Number(parsed.level))
+    }
+  } catch {
+    // Missing or malformed → comfortable default.
+  }
+  return DEFAULT_ZOOM_LEVEL
+}
+
+function writeDesktopZoomLevel(level) {
+  try {
+    fs.mkdirSync(path.dirname(DESKTOP_ZOOM_CONFIG_PATH), { recursive: true })
+    writeFileAtomic(DESKTOP_ZOOM_CONFIG_PATH, JSON.stringify({ level: clampZoomLevel(level) }, null, 2))
+  } catch {
+    // Best-effort; zoom persistence is non-critical.
+  }
+}
+
+// Apply a zoom level to the window and (optionally) persist it.
+function applyDesktopZoom(window, level, { persist = true } = {}) {
+  if (!window || window.isDestroyed()) return
+  const clamped = clampZoomLevel(level)
+  window.webContents.setZoomLevel(clamped)
+  if (persist) writeDesktopZoomLevel(clamped)
+}
+
 function installZoomShortcuts(window) {
-  // Override Ctrl/Cmd + +/-/0 with half the default zoom step (0.1 vs 0.2).
-  // The menu items handle this on macOS (where the menu is always present),
-  // but on Linux/Windows the menu is null and Chromium's default handler
-  // would use the full 0.2 step, so we intercept here for consistency.
+  // Override Ctrl/Cmd + +/-/0 with half the default zoom step (0.1 vs 0.2) and
+  // persist the result. The menu items mirror this on macOS; on Linux/Windows
+  // the menu is null so this is the only handler.
   const ZOOM_STEP = 0.1
+
+  // Electron drops zoom back to 0 on every navigation/reload (reconnect, HMR,
+  // applyConnectionConfig), so re-apply the saved level after each load.
+  window.webContents.on('did-finish-load', () => {
+    applyDesktopZoom(window, readDesktopZoomLevel(), { persist: false })
+  })
+
   window.webContents.on('before-input-event', (event, input) => {
     const mod = IS_MAC ? input.meta : input.control
     if (!mod || input.alt || input.shift) return
@@ -2990,15 +3065,13 @@ function installZoomShortcuts(window) {
     const key = input.key
     if (key === '0') {
       event.preventDefault()
-      window.webContents.setZoomLevel(0)
+      applyDesktopZoom(window, 0)
     } else if (key === '=' || key === '+') {
       event.preventDefault()
-      const next = Math.min(window.webContents.getZoomLevel() + ZOOM_STEP, 9)
-      window.webContents.setZoomLevel(next)
+      applyDesktopZoom(window, window.webContents.getZoomLevel() + ZOOM_STEP)
     } else if (key === '-') {
       event.preventDefault()
-      const next = Math.max(window.webContents.getZoomLevel() - ZOOM_STEP, -9)
-      window.webContents.setZoomLevel(next)
+      applyDesktopZoom(window, window.webContents.getZoomLevel() - ZOOM_STEP)
     }
   })
 }
@@ -3496,7 +3569,10 @@ function readDesktopConnectionConfig() {
     return connectionConfigCache
   }
 
-  let config = { mode: 'local', remote: {} }
+  // Remote-only fork: default to 'remote' so a fresh/missing config never sits
+  // in local mode. (Upstream default is 'local'.)
+  const defaultMode = REMOTE_ONLY ? 'remote' : 'local'
+  let config = { mode: defaultMode, remote: {} }
 
   try {
     const raw = fs.readFileSync(DESKTOP_CONNECTION_CONFIG_PATH, 'utf8')
@@ -3509,12 +3585,12 @@ function readDesktopConnectionConfig() {
       // backward compatibility with configs written before OAuth support.
       remote.authMode = remote.authMode === 'oauth' ? 'oauth' : 'token'
       config = {
-        mode: parsed.mode === 'remote' ? 'remote' : 'local',
+        mode: parsed.mode === 'remote' ? 'remote' : defaultMode,
         remote
       }
     }
   } catch {
-    // Missing or malformed connection settings should fall back to local.
+    // Missing or malformed connection settings fall back to defaultMode.
   }
 
   connectionConfigCache = config
@@ -3985,6 +4061,12 @@ function startPoolIdleReaper() {
 // local-spawn portion of startHermes() but without the boot-progress UI,
 // bootstrap, or remote handling (those belong to the primary backend only).
 async function spawnPoolBackend(profile, entry) {
+  // Remote-only fork: profiles spawn a local backend per HERMES_HOME, which this
+  // build never does. The Profiles UI is hidden, but guard here too.
+  if (REMOTE_ONLY) {
+    throw new Error('Profiles are unavailable in this remote-only build.')
+  }
+
   // Remote deployments are single-tenant; profiles only apply to local backends.
   const remote = await resolveRemoteBackend()
   if (remote) {
@@ -4110,6 +4192,23 @@ async function startHermes() {
         logs: hermesLog.slice(-80),
         ...getWindowState()
       }
+    }
+
+    // Remote-only fork: never fall through to spawning a local Python backend.
+    // If no remote was resolved (no env override, no saved remote URL), fail with
+    // a clear message routed through the boot-failure overlay instead of
+    // bootstrapping/spawning anything locally.
+    if (REMOTE_ONLY) {
+      updateBootProgress(
+        {
+          error: REMOTE_ONLY_NO_GATEWAY_MSG,
+          message: REMOTE_ONLY_NO_GATEWAY_MSG,
+          phase: 'backend.error',
+          running: false
+        },
+        { allowDecrease: true }
+      )
+      throw new Error(REMOTE_ONLY_NO_GATEWAY_MSG)
     }
 
     await advanceBootProgress('backend.port', 'Finding an open local port', 16)
@@ -4258,9 +4357,10 @@ function createWindow() {
     titleBarStyle: 'hidden',
     titleBarOverlay: getTitleBarOverlayOptions(),
     trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
-    vibrancy: IS_MAC ? 'sidebar' : undefined,
+    // Monochrome dark, flat: no translucent window vibrancy.
+    vibrancy: undefined,
     icon,
-    backgroundColor: '#f7f7f7',
+    backgroundColor: '#0e0e0e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -4978,6 +5078,7 @@ app.whenReady().then(() => {
   registerMediaProtocol()
   ensureWslWindowsFonts()
   configureSpellChecker()
+  installDevGatewayOriginStrip()
   registerPowerResumeListeners()
   createWindow()
 
@@ -4985,6 +5086,51 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+// Dev-only: under `npm run dev` the renderer is served from the Vite dev server
+// (http://127.0.0.1:5174), so WebSocket upgrades to the remote gateway carry an
+// `Origin: http://127.0.0.1:5174` header. A gateway bound to a specific IP
+// rejects that as an origin mismatch (HTTP 403) — see _ws_host_origin_reason in
+// hermes_cli/web_server.py. The packaged app loads from file:// and is exempt
+// because the guard trusts non-web origins. To get the same behavior in dev, we
+// strip the Origin header on outgoing gateway WS upgrades: an empty Origin is
+// treated as allowed by the guard. Gated on DEV_SERVER so production is never
+// touched, and scoped to /api/ WS paths so Vite's own HMR socket is left alone.
+function installDevGatewayOriginStrip() {
+  if (!DEV_SERVER) return
+
+  const ses = session.defaultSession
+  if (!ses?.webRequest?.onBeforeSendHeaders) return
+
+  ses.webRequest.onBeforeSendHeaders({ urls: ['ws://*/*', 'wss://*/*'] }, (details, callback) => {
+    if (details.resourceType === 'webSocket') {
+      let pathname = ''
+      try {
+        pathname = new URL(details.url).pathname
+      } catch {
+        pathname = ''
+      }
+
+      // Only the gateway's WS endpoints (/api/ws, /api/pub, …) — never Vite's
+      // HMR socket, which lives at the dev-server root.
+      if (pathname.startsWith('/api/')) {
+        const headers = details.requestHeaders
+        for (const key of Object.keys(headers)) {
+          if (key.toLowerCase() === 'origin') {
+            delete headers[key]
+          }
+        }
+        callback({ requestHeaders: headers })
+
+        return
+      }
+    }
+
+    callback({ requestHeaders: details.requestHeaders })
+  })
+
+  rememberLog('[dev] Stripping Origin on remote-gateway WS upgrades so the dev-server origin passes the gateway Host/Origin guard')
+}
 
 // Seed Chromium's spellchecker with the system locale (falling back to en-US).
 // On macOS Electron uses the native spellchecker which ignores this list, but

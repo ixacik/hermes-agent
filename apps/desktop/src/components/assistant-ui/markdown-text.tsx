@@ -61,7 +61,7 @@ async function mediaSrc(path: string): Promise<string> {
 function OpenMediaButton({ kind, path }: { kind: 'audio' | 'video'; path: string }) {
   return (
     <button
-      className="mt-2 bg-transparent text-xs font-medium text-muted-foreground underline underline-offset-4 decoration-current/20 hover:text-foreground"
+      className="mt-2 bg-transparent text-xs font-medium text-muted-foreground underline underline-offset-4 decoration-current hover:text-foreground"
       onClick={() => void window.hermesDesktop?.openExternal(mediaExternalUrl(path))}
       type="button"
     >
@@ -119,7 +119,7 @@ function MediaAttachment({ path }: { path: string }) {
 
   if (kind === 'audio' && src) {
     return (
-      <span className="my-3 block max-w-md rounded-xl border border-border bg-muted/35 p-3">
+      <span className="my-3 block max-w-md rounded-xl border border-border bg-muted p-3">
         <span className="mb-2 block truncate text-xs font-medium text-muted-foreground">{name}</span>
         <audio className="block w-full" controls onError={() => setFailed(true)} preload="metadata" src={src} />
         {failed && <OpenMediaButton kind="audio" path={path} />}
@@ -129,7 +129,7 @@ function MediaAttachment({ path }: { path: string }) {
 
   if (kind === 'video' && src) {
     return (
-      <span className="my-3 block max-w-2xl rounded-xl border border-border bg-muted/35 p-3">
+      <span className="my-3 block max-w-2xl rounded-xl border border-border bg-muted p-3">
         <span className="mb-2 block truncate text-xs font-medium text-muted-foreground">{name}</span>
         <video
           className="block max-h-112 w-full rounded-lg bg-black"
@@ -144,7 +144,7 @@ function MediaAttachment({ path }: { path: string }) {
 
   return (
     <a
-      className="font-semibold text-foreground underline underline-offset-4 decoration-current/20 wrap-anywhere"
+      className="font-semibold text-foreground underline underline-offset-4 decoration-current wrap-anywhere"
       href="#"
       onClick={event => {
         event.preventDefault()
@@ -187,7 +187,7 @@ function MarkdownLink({ children, className, href, ...props }: ComponentProps<'a
     return (
       <a
         className={cn(
-          'font-semibold text-foreground underline underline-offset-4 decoration-current/20 wrap-anywhere',
+          'font-semibold text-foreground underline underline-offset-4 decoration-current wrap-anywhere',
           className
         )}
         href={href}
@@ -278,8 +278,8 @@ const MARKDOWN_CONTAINER_CLASS_NAME = cn(
   'prose-p:leading-(--dt-line-height) prose-li:leading-(--dt-line-height)',
   'prose-headings:text-foreground prose-strong:text-foreground',
   'prose-a:break-words prose-p:[overflow-wrap:anywhere]',
-  'prose-li:marker:text-muted-foreground/70',
-  'prose-code:rounded-[0.25rem] prose-code:px-[0.1875rem] prose-code:py-px prose-code:font-mono prose-code:text-[0.9em] prose-code:font-normal prose-code:before:content-none prose-code:after:content-none',
+  'prose-li:marker:text-muted-foreground',
+  'prose-code:rounded-lg prose-code:px-[0.3125rem] prose-code:py-[0.125rem] prose-code:font-mono prose-code:text-[0.9em] prose-code:font-normal prose-code:before:content-none prose-code:after:content-none',
   '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>*+*]:mt-1'
 )
 
@@ -330,7 +330,7 @@ function MarkdownTextSurface({ containerClassName, containerProps }: MarkdownTex
           <li className={cn('leading-(--dt-line-height)', className)} {...props} />
         ),
         table: ({ className, ...props }: ComponentProps<'table'>) => (
-          <div className="aui-md-table my-2 max-w-full overflow-x-auto rounded-[0.375rem] border border-border">
+          <div className="aui-md-table my-2 max-w-full overflow-x-auto rounded-lg border border-border">
             <table
               className={cn(
                 'm-0 w-full border-collapse text-[0.8125rem] [&_tr]:border-b [&_tr]:border-border last:[&_tr]:border-0',
@@ -341,7 +341,7 @@ function MarkdownTextSurface({ containerClassName, containerProps }: MarkdownTex
           </div>
         ),
         thead: ({ className, ...props }: ComponentProps<'thead'>) => (
-          <thead className={cn('m-0 bg-muted/35 text-muted-foreground', className)} {...props} />
+          <thead className={cn('m-0 bg-muted text-muted-foreground', className)} {...props} />
         ),
         th: ({ className, ...props }: ComponentProps<'th'>) => (
           <th

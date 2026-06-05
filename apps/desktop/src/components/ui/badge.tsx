@@ -7,14 +7,14 @@ import { cn } from '@/lib/utils'
 // Small status/metadata tag. App radius (not a full pill); tones map to the
 // shared accent/muted/destructive surfaces so badges read consistently.
 const badgeVariants = cva(
-  'inline-flex w-fit shrink-0 items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[0.65rem] font-medium leading-none whitespace-nowrap [&_svg]:size-3 [&_svg]:pointer-events-none',
+  'inline-flex w-fit shrink-0 items-center gap-1 rounded-lg px-1.5 py-0.5 text-[0.65rem] font-medium leading-none whitespace-nowrap [&_svg]:size-3 [&_svg]:pointer-events-none',
   {
     variants: {
       variant: {
-        default: 'bg-primary/10 text-primary',
+        default: 'bg-(--ui-bg-selected) text-primary',
         muted: 'bg-muted text-muted-foreground',
         warn: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
-        destructive: 'bg-destructive/10 text-destructive',
+        destructive: 'bg-(--ui-bg-error) text-destructive',
         outline: 'border border-(--ui-stroke-secondary) text-muted-foreground'
       }
     },

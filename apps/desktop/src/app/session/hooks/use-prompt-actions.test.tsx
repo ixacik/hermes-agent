@@ -61,7 +61,6 @@ function Harness({
     branchCurrentSession: async () => true,
     busyRef,
     createBackendSessionForSend: async () => RUNTIME_SESSION_ID,
-    handleSkinCommand: () => '',
     refreshSessions,
     requestGateway,
     selectedStoredSessionIdRef,

@@ -592,7 +592,7 @@ export function ChatSidebar({
                       tooltip={item.label}
                       type="button"
                     >
-                      <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
+                      <item.icon className="size-4 shrink-0 text-(--ui-text-tertiary)" />
                       {sidebarOpen && (
                         <>
                           <span className="min-w-0 flex-1 truncate max-[46.25rem]:hidden">{item.label}</span>
@@ -745,7 +745,7 @@ export function ChatSidebar({
         {sidebarOpen && !showSessionSections && <div className="min-h-0 flex-1" />}
 
         {sidebarOpen && (
-          <div className="shrink-0 px-0.5 pb-1 pt-0.5">
+          <div className="shrink-0 px-0.5 pb-3 pt-0.5">
             <ProfileRail />
           </div>
         )}

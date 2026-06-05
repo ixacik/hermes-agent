@@ -25,7 +25,7 @@ const tone: Record<NotificationKind, { icon: IconComponent; iconClass: string; v
   success: { icon: CheckCircle2, iconClass: 'text-primary', variant: 'success' }
 }
 
-const STACK_SURFACE = 'pointer-events-auto border-border/80 bg-popover/95 shadow-lg shadow-black/5 backdrop-blur-md'
+const STACK_SURFACE = 'pointer-events-auto border-border bg-popover shadow-lg shadow-black/5'
 const GHOST_BTN = 'bg-transparent text-muted-foreground hover:text-foreground'
 
 export function NotificationStack() {
@@ -113,7 +113,7 @@ function NotificationItem({ notification }: { notification: AppNotification }) {
           {hasDetail && <NotificationDetail detail={notification.detail || ''} />}
           {notification.action && (
             <button
-              className="mt-1.5 inline-flex items-center rounded-md bg-primary/15 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/25"
+              className="mt-1.5 inline-flex items-center rounded-md bg-(--ui-bg-selected) px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-(--ui-bg-selected)"
               onClick={() => {
                 notification.action?.onClick()
                 dismissNotification(notification.id)
@@ -141,13 +141,13 @@ function NotificationDetail({ detail }: { detail: string }) {
   return (
     <details className="mt-2 text-xs text-muted-foreground">
       <summary className="select-none font-medium text-muted-foreground hover:text-foreground">Details</summary>
-      <div className="mt-1 rounded-md border border-border/70 bg-background/65 p-2">
+      <div className="mt-1 rounded-md border border-border bg-background p-2">
         <pre className="max-h-32 whitespace-pre-wrap wrap-break-word font-mono text-[0.6875rem] leading-relaxed">
           {detail}
         </pre>
         <CopyButton
           appearance="inline"
-          className="mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="mt-1 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground hover:bg-accent hover:text-foreground"
           errorMessage="Could not copy notification detail"
           iconClassName="size-3"
           label="Copy detail"

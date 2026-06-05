@@ -77,8 +77,8 @@ function ConsoleRow({ copyText, log, onSend, onToggleSelect, selected }: Console
   return (
     <div
       className={cn(
-        'group/row grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-2 rounded-md border border-transparent px-1 py-1 transition-colors hover:bg-accent/40',
-        selected && 'border-border/60 bg-accent/40'
+        'group/row grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-2 rounded-md border border-transparent px-1 py-1 transition-colors hover:bg-accent',
+        selected && 'border-border bg-accent'
       )}
     >
       <Tip label={selected ? 'Deselect entry' : 'Select entry'}>
@@ -98,7 +98,7 @@ function ConsoleRow({ copyText, log, onSend, onToggleSelect, selected }: Console
           {log.message}
         </span>
         {log.source && (
-          <span className="block truncate text-muted-foreground/60">
+          <span className="block truncate text-muted-foreground">
             {compactUrl(log.source)}
             {log.line ? `:${log.line}` : ''}
           </span>
@@ -201,7 +201,7 @@ export function PreviewConsolePanel({
 
   return (
     <div
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-(--preview-console-height) min-h-8 flex-col overflow-hidden border-t border-border/60 bg-background"
+      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-(--preview-console-height) min-h-8 flex-col overflow-hidden border-t border-border bg-background"
       style={{ '--preview-console-height': `${consoleHeight}px` } as CSSProperties}
     >
       <div
@@ -211,9 +211,9 @@ export function PreviewConsolePanel({
         onPointerDown={startConsoleResize}
         role="separator"
       >
-        <span className="absolute left-1/2 top-1/2 h-0.75 w-23 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/80 opacity-0 transition-opacity duration-100 group-hover:opacity-[0.5]" />
+        <span className="absolute left-1/2 top-1/2 h-0.75 w-23 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground opacity-0 transition-opacity duration-100 group-hover:opacity-[0.5]" />
       </div>
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-border/50 px-2">
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-border px-2">
         <div className="flex items-center gap-2 text-[0.6875rem] font-medium text-muted-foreground">
           <PanelBottom className="size-3.5" />
           Preview Console
@@ -275,7 +275,7 @@ export function PreviewConsolePanel({
             )
           })
         ) : (
-          <div className="py-2 text-muted-foreground/70">No console messages yet.</div>
+          <div className="py-2 text-muted-foreground">No console messages yet.</div>
         )}
       </div>
     </div>

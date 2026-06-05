@@ -74,7 +74,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Loader } from '@/components/ui/loader'
 import type { HermesGateway } from '@/hermes'
-import { useResizeObserver } from '@/hooks/use-resize-observer'
 import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
 import { GitBranchIcon, Loader2Icon, Volume2Icon, VolumeXIcon } from '@/lib/icons'
@@ -195,7 +194,7 @@ const CenteredThreadSpinner: FC = () => (
   >
     <Loader
       aria-hidden="true"
-      className="size-12 text-midground/70"
+      className="size-12 text-midground"
       pathSteps={220}
       role="presentation"
       strokeScale={0.72}
@@ -238,7 +237,7 @@ const AssistantMessage: FC<{ onBranchInNewChat?: (messageId: string) => void }> 
       <div
         className={cn(
           'wrap-anywhere min-w-0 max-w-full overflow-hidden text-pretty text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground',
-          interruptedOnly && 'text-[0.8rem] leading-5 text-muted-foreground/82'
+          interruptedOnly && 'text-[0.8rem] leading-5 text-muted-foreground'
         )}
         data-slot="aui_assistant-message-content"
       >
@@ -276,7 +275,7 @@ const StatusRow: FC<{ children: ReactNode; label: string } & React.ComponentProp
   <div
     aria-label={label}
     aria-live="polite"
-    className={cn('flex max-w-full items-center gap-2 self-start text-sm text-muted-foreground/70', className)}
+    className={cn('flex max-w-full items-center gap-2 self-start text-sm text-muted-foreground', className)}
     role="status"
     {...rest}
   >
@@ -289,7 +288,7 @@ const ResponseLoadingIndicator: FC = () => {
 
   return (
     <StatusRow data-slot="aui_response-loading" label="Hermes is loading a response">
-      <span aria-hidden="true" className="dither inline-block size-3 rounded-[2px] text-midground/80 animate-pulse" />
+      <span aria-hidden="true" className="dither inline-block size-3 rounded-[2px] text-midground animate-pulse" />
       <ActivityTimerText seconds={elapsed} />
     </StatusRow>
   )
@@ -386,11 +385,14 @@ const ThinkingDisclosure: FC<{
       ref={enterRef}
     >
       <DisclosureRow onToggle={() => setUserOpen(!open)} open={open}>
-        <span className="flex min-w-0 items-baseline gap-1.5">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="grid size-3.5 shrink-0 place-items-center self-center">
+            <Codicon className="text-(--ui-text-tertiary)" name="sparkle" size="0.875rem" />
+          </span>
           <span
             className={cn(
               'text-[length:var(--conversation-tool-font-size)] font-medium leading-(--conversation-line-height) text-(--ui-text-secondary)',
-              pending && 'shimmer text-foreground/55'
+              pending && 'text-(--ui-text-secondary)'
             )}
           >
             Thinking
@@ -457,8 +459,8 @@ const ReasoningTextPart: FC<{ text: string; status?: { type: string } }> = ({ te
   return (
     <MarkdownTextContent
       containerClassName={cn(
-        'text-xs leading-relaxed text-muted-foreground/85',
-        isRunning && 'shimmer text-muted-foreground/55'
+        'text-xs leading-relaxed text-muted-foreground',
+        isRunning && 'text-muted-foreground'
       )}
       containerProps={{ 'data-slot': 'aui_reasoning-text' } as ComponentProps<'div'>}
       isRunning={isRunning}
@@ -643,9 +645,11 @@ function messageAttachmentRefs(value: unknown): string[] {
 }
 
 function StickyHumanMessageContainer({ children }: { children: ReactNode }) {
+  // User messages flow inline with the conversation (no sticky pinning) — the
+  // old `position: sticky` pin caused per-scroll repaint jank.
   return (
     <div
-      className="group/user-message sticky z-40 -mx-4 flex w-[calc(100%+2rem)] min-w-0 max-w-none flex-col items-stretch gap-0 self-end overflow-visible bg-(--ui-chat-surface-background) px-4 pb-(--conversation-turn-gap) pt-2"
+      className="group/user-message -mx-4 flex w-[calc(100%+2rem)] min-w-0 max-w-none flex-col items-stretch gap-0 self-end overflow-visible bg-(--ui-chat-surface-background) px-4 pb-(--conversation-turn-gap) pt-2"
       data-role="user"
       data-slot="aui_user-message-root"
     >
@@ -655,7 +659,7 @@ function StickyHumanMessageContainer({ children }: { children: ReactNode }) {
 }
 
 // Shared "user bubble" base. Both the read-only message and the inline
-// edit composer render the same bubble surface (rounded glass card,
+// edit composer render the same bubble surface (rounded-lg glass card,
 // shadow-composer); they only differ in border weight, cursor, and
 // padding-right (the read-only view reserves room for the restore icon).
 const USER_BUBBLE_BASE_CLASS =
@@ -693,32 +697,6 @@ const UserMessage: FC<{
     return messageAttachmentRefs(custom.attachmentRefs)
   })
 
-  // Sticky human bubbles clamp to ~2 lines with a soft fade so a long prompt
-  // doesn't dominate the viewport while the response streams underneath; the
-  // clamp lifts on hover / focus (see styles.css). We measure the *unclamped*
-  // inner wrapper so the ResizeObserver only fires on real content / width
-  // changes, not on every frame while the outer max-height animates open.
-  const clampInnerRef = useRef<HTMLDivElement | null>(null)
-  const [bodyClamped, setBodyClamped] = useState(false)
-
-  const measureClamp = useCallback(() => {
-    const inner = clampInnerRef.current
-    const outer = inner?.parentElement
-
-    if (!inner || !outer) {
-      return
-    }
-
-    const styles = getComputedStyle(inner)
-    const lineHeight = parseFloat(styles.lineHeight) || 1.5 * parseFloat(styles.fontSize) || 20
-    const fullHeight = inner.scrollHeight
-
-    outer.style.setProperty('--human-msg-full', `${fullHeight}px`)
-    setBodyClamped(fullHeight > lineHeight * 2 + 1)
-  }, [])
-
-  useResizeObserver(measureClamp, clampInnerRef)
-
   const hasBody = messageText.trim().length > 0
   const isLatestUser = messageId === latestUserId
   const showStop = isLatestUser && threadRunning && Boolean(onCancel)
@@ -726,14 +704,14 @@ const UserMessage: FC<{
 
   const bubbleClassName = cn(
     USER_BUBBLE_BASE_CLASS,
-    'border-(--ui-stroke-tertiary) pr-9 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground/95 transition-colors',
+    'border-(--ui-stroke-tertiary) pr-9 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary) transition-colors',
     !threadRunning && 'cursor-pointer hover:border-(--ui-stroke-secondary)'
   )
 
   const bubbleContent = (
     <>
       {attachmentRefs.length > 0 && (
-        <span className="-mx-1 flex flex-wrap gap-1 border-b border-border/45 pb-1.5">
+        <span className="-mx-1 flex flex-wrap gap-1 border-b border-border pb-1.5">
           <DirectiveContent text={attachmentRefs.join(' ')} />
         </span>
       )}
@@ -741,11 +719,7 @@ const UserMessage: FC<{
         // Render the user's text through a minimal markdown pipeline:
         // backtick `code` and ``` fenced ``` blocks, with directive chips
         // (`@file:` etc.) still resolved inside the plain-text spans.
-        <div className="sticky-human-clamp" data-clamped={bodyClamped ? 'true' : undefined}>
-          <div ref={clampInnerRef}>
-            <UserMessageText className="wrap-anywhere" text={messageText} />
-          </div>
-        </div>
+        <UserMessageText className="wrap-anywhere" text={messageText} />
       )}
     </>
   )
@@ -841,12 +815,12 @@ const SystemMessage: FC = () => {
   if (slashStatus?.groups) {
     return (
       <MessagePrimitive.Root
-        className="max-w-[min(86%,44rem)] self-center px-2 py-0.5 text-center text-[0.6875rem] leading-5 text-muted-foreground/60"
+        className="max-w-[min(86%,44rem)] self-center px-2 py-0.5 text-center text-[0.6875rem] leading-5 text-muted-foreground"
         data-role="system"
         data-slot="aui_system-message-root"
       >
-        <span className="font-mono text-muted-foreground/55">{slashStatus.groups.command}</span>
-        <span className="mx-1.5 text-muted-foreground/35">·</span>
+        <span className="font-mono text-muted-foreground">{slashStatus.groups.command}</span>
+        <span className="mx-1.5 text-muted-foreground">·</span>
         <span className="whitespace-pre-wrap">{slashStatus.groups.output.trim()}</span>
       </MessagePrimitive.Root>
     )
@@ -854,7 +828,7 @@ const SystemMessage: FC = () => {
 
   return (
     <MessagePrimitive.Root
-      className="max-w-[min(86%,44rem)] self-center px-2 py-0.5 text-center text-[0.6875rem] leading-5 text-muted-foreground/55"
+      className="max-w-[min(86%,44rem)] self-center px-2 py-0.5 text-center text-[0.6875rem] leading-5 text-muted-foreground"
       data-role="system"
       data-slot="aui_system-message-root"
     >
@@ -1349,8 +1323,8 @@ const UserEditComposer: FC<UserEditComposerProps> = ({ cwd, gateway, sessionId }
               aria-label="Edit message"
               autoFocus
               className={cn(
-                'ui-prompt-input-editor__input max-h-48 w-full resize-none bg-transparent p-0 pr-7 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground/95 outline-none',
-                'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/60',
+                'ui-prompt-input-editor__input max-h-48 w-full resize-none bg-transparent p-0 pr-7 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary) outline-none',
+                'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground',
                 '**:data-ref-text:cursor-default',
                 expanded ? 'min-h-16' : 'min-h-[1.25rem]'
               )}

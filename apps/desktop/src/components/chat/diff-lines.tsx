@@ -21,7 +21,7 @@ const DIFF_LINE_KINDS: DiffLineKind[] = [
   { className: 'text-rose-700 dark:text-rose-300', match: line => line.startsWith('-') && !line.startsWith('---') },
   { className: 'text-sky-700 dark:text-sky-300', match: line => line.startsWith('@@') },
   {
-    className: 'text-muted-foreground/70',
+    className: 'text-muted-foreground',
     match: line => line.startsWith('---') || line.startsWith('+++') || / → /.test(line.slice(0, 60))
   }
 ]
@@ -38,7 +38,7 @@ export function DiffLines({ className, text, ...props }: DiffLinesProps) {
   return (
     <pre
       className={cn(
-        'mt-2 max-h-96 max-w-full min-w-0 overflow-auto rounded-md border border-border/60 bg-muted/35 px-2.5 py-1.5 font-mono text-[0.7rem] leading-relaxed text-muted-foreground',
+        'mt-2 max-h-96 max-w-full min-w-0 overflow-auto rounded-md border border-border bg-muted px-2.5 py-1.5 font-mono text-[0.7rem] leading-relaxed text-muted-foreground',
         className
       )}
       data-slot="diff-lines"

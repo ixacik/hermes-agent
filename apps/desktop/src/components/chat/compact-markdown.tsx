@@ -10,19 +10,19 @@ import { cn } from '@/lib/utils'
 // instead of being dumped as raw text.
 
 const TAG_CLASSES = {
-  blockquote: 'mt-2 mb-2 border-l-2 border-border/70 pl-2.5 italic text-muted-foreground/85',
+  blockquote: 'mt-2 mb-2 border-l-2 border-border pl-2.5 italic text-muted-foreground',
   h1: 'mt-3 mb-1.5 text-sm font-semibold tracking-tight text-foreground first:mt-0',
   h2: 'mt-3 mb-1.5 text-[0.82rem] font-semibold tracking-tight text-foreground first:mt-0',
   h3: 'mt-2.5 mb-1 text-[0.78rem] font-semibold text-foreground first:mt-0',
   h4: 'mt-2 mb-1 text-[0.74rem] font-semibold text-foreground first:mt-0',
-  hr: 'my-2 border-border/50',
-  li: 'marker:text-muted-foreground/60',
+  hr: 'my-2 border-border',
+  li: 'marker:text-muted-foreground',
   ol: 'mb-2 list-decimal pl-5 last:mb-0',
   p: 'mb-1.5 leading-relaxed last:mb-0',
-  pre: 'mb-2 overflow-x-auto rounded-md border border-border/60 bg-background/70 p-2 font-mono text-[0.7rem] leading-[1.55] last:mb-0',
+  pre: 'mb-2 overflow-x-auto rounded-md border border-border bg-background p-2 font-mono text-[0.7rem] leading-[1.55] last:mb-0',
   td: 'px-2 py-1 align-top leading-snug',
-  th: 'px-2 py-1 text-left text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80',
-  thead: 'bg-muted/40',
+  th: 'px-2 py-1 text-left text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground',
+  thead: 'bg-muted',
   ul: 'mb-2 list-disc pl-5 last:mb-0'
 } as const
 
@@ -42,7 +42,7 @@ function MarkdownAnchor({ children, className, href, ...rest }: ComponentProps<'
   if (!href || !/^https?:\/\//i.test(href)) {
     return (
       <a
-        className={cn('font-medium underline underline-offset-4 decoration-current/20', className)}
+        className={cn('font-medium underline underline-offset-4 decoration-current', className)}
         href={href}
         {...rest}
       >
@@ -52,7 +52,7 @@ function MarkdownAnchor({ children, className, href, ...rest }: ComponentProps<'
   }
 
   return (
-    <ExternalLink className={cn('decoration-current/20', className)} href={href} showExternalIcon={false}>
+    <ExternalLink className={cn('decoration-current', className)} href={href} showExternalIcon={false}>
       {children}
       <ExternalLinkIcon />
     </ExternalLink>
@@ -62,7 +62,7 @@ function MarkdownAnchor({ children, className, href, ...rest }: ComponentProps<'
 function MarkdownCode({ className, ...rest }: ComponentProps<'code'>) {
   return (
     <code
-      className={cn('rounded bg-muted/80 px-1 py-px font-mono text-[0.86em] text-muted-foreground', className)}
+      className={cn('rounded-lg bg-muted px-1 py-px font-mono text-[0.86em] text-muted-foreground', className)}
       {...rest}
     />
   )
@@ -70,10 +70,10 @@ function MarkdownCode({ className, ...rest }: ComponentProps<'code'>) {
 
 function MarkdownTable({ className, ...rest }: ComponentProps<'table'>) {
   return (
-    <div className="mb-2 max-w-full overflow-x-auto rounded-md border border-border/60 last:mb-0">
+    <div className="mb-2 max-w-full overflow-x-auto rounded-md border border-border last:mb-0">
       <table
         className={cn(
-          'w-full border-collapse text-[0.72rem] [&_tr]:border-b [&_tr]:border-border/50 last:[&_tr]:border-0',
+          'w-full border-collapse text-[0.72rem] [&_tr]:border-b [&_tr]:border-border last:[&_tr]:border-0',
           className
         )}
         {...rest}
@@ -104,7 +104,7 @@ const COMPONENTS = {
 
 export function CompactMarkdown({ className, text }: { className?: string; text: string }) {
   return (
-    <div className={cn('max-w-full text-xs leading-relaxed text-muted-foreground/90 wrap-anywhere', className)}>
+    <div className={cn('max-w-full text-xs leading-relaxed text-muted-foreground wrap-anywhere', className)}>
       <Streamdown components={COMPONENTS} controls={false} mode="static" parseIncompleteMarkdown={false}>
         {text}
       </Streamdown>

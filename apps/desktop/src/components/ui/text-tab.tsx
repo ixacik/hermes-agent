@@ -28,7 +28,7 @@ function TextTab({ active = false, children, className, type = 'button', ...prop
         ) : (
           <span
             className={cn(
-              'underline-offset-4 decoration-current/25',
+              'underline-offset-4 decoration-current',
               active ? 'underline' : 'group-hover/text-tab:underline'
             )}
           >

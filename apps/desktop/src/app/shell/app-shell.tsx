@@ -16,17 +16,14 @@ import {
 import { $paneWidthOverride } from '@/store/panes'
 import { $connection } from '@/store/session'
 
-import { StatusbarControls, type StatusbarItem } from './statusbar-controls'
 import { TITLEBAR_HEIGHT, titlebarControlsPosition } from './titlebar'
 import { TitlebarControls, type TitlebarTool } from './titlebar-controls'
 
 interface AppShellProps {
   children: ReactNode
-  leftStatusbarItems?: readonly StatusbarItem[]
   leftTitlebarTools?: readonly TitlebarTool[]
   onOpenSettings: () => void
   overlays?: ReactNode
-  statusbarItems?: readonly StatusbarItem[]
   titlebarTools?: readonly TitlebarTool[]
 }
 
@@ -47,11 +44,9 @@ const viewportIsFullscreen = () =>
 
 export function AppShell({
   children,
-  leftStatusbarItems,
   leftTitlebarTools,
   onOpenSettings,
   overlays,
-  statusbarItems,
   titlebarTools
 }: AppShellProps) {
   const sidebarOpen = useStore($sidebarOpen)
@@ -149,8 +144,6 @@ export function AppShell({
 
           {children}
         </PaneShell>
-
-        <StatusbarControls items={statusbarItems} leftItems={leftStatusbarItems} />
       </main>
 
       {overlays}

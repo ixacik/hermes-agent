@@ -11,7 +11,6 @@ import { Suspense, useCallback, useMemo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 
 import { Thread } from '@/components/assistant-ui/thread'
-import { Backdrop } from '@/components/Backdrop'
 import { PromptOverlays } from '@/components/prompt-overlays'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -58,6 +57,7 @@ import { lastVisibleMessageIsUser, threadLoadingState } from './thread-loading'
 
 interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   gateway: HermesGateway | null
+  modelMenuContent?: React.ReactNode
   onToggleSelectedPin: () => void
   onDeleteSelectedSession: () => void
   onCancel: () => Promise<void> | void
@@ -150,6 +150,7 @@ function ChatHeader({
 export function ChatView({
   className,
   gateway,
+  modelMenuContent,
   onToggleSelectedPin,
   onDeleteSelectedSession,
   onCancel,
@@ -324,7 +325,6 @@ export function ChatView({
         className
       )}
     >
-      <Backdrop />
       <ChatHeader
         activeSessionId={activeSessionId}
         isRoutedSessionView={isRoutedSessionView}
@@ -360,6 +360,7 @@ export function ChatView({
                 focusKey={activeSessionId}
                 gateway={gateway}
                 maxRecordingSeconds={maxVoiceRecordingSeconds}
+                modelMenuContent={modelMenuContent}
                 onAddContextRef={onAddContextRef}
                 onAddUrl={onAddUrl}
                 onAttachDroppedItems={onAttachDroppedItems}

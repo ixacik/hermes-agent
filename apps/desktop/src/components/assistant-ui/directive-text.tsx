@@ -103,7 +103,7 @@ const DirectiveIcon: FC<{ type: string }> = ({ type }) => (
  * raw HTML composer chips in `rich-editor.ts`. Neutral subtle wash + plain
  * muted-foreground text so chips read as quiet tags on any bubble color. */
 export const DIRECTIVE_CHIP_CLASS =
-  'mx-0.5 inline-flex max-w-56 items-center gap-1 rounded px-1.5 py-0.5 align-middle text-[0.86em] font-normal leading-none bg-[color-mix(in_srgb,currentColor_8%,transparent)] text-muted-foreground'
+  'mx-0.5 inline-flex max-w-56 items-center gap-1 rounded-lg px-1.5 py-0.5 align-middle text-[0.86em] font-normal leading-none bg-(--ui-bg-tertiary) text-muted-foreground'
 
 /**
  * Parses our composer's `@type:value` references into directive segments
@@ -305,7 +305,7 @@ export function DirectiveContent({ text }: { text: string }) {
           {images.map((src, index) => (
             <ZoomableImage
               alt=""
-              className="max-h-48 max-w-full rounded-lg border border-border/60 object-contain"
+              className="max-h-48 max-w-full rounded-lg border border-border object-contain"
               draggable={false}
               key={`img-${index}`}
               slot="aui_embedded-image"
@@ -355,7 +355,7 @@ const DirectiveImage: FC<{ id: string; label: string }> = ({ id, label }) => {
     return (
       <span
         aria-hidden
-        className="inline-block size-12 shrink-0 animate-pulse rounded-md bg-[color-mix(in_srgb,currentColor_8%,transparent)]"
+        className="inline-block size-12 shrink-0 animate-pulse rounded-md bg-(--ui-bg-tertiary)"
       />
     )
   }
@@ -363,7 +363,7 @@ const DirectiveImage: FC<{ id: string; label: string }> = ({ id, label }) => {
   return (
     <ZoomableImage
       alt={label}
-      className="max-h-32 max-w-48 rounded-md border border-border/40 object-contain"
+      className="max-h-32 max-w-48 rounded-md border border-border object-contain"
       draggable={false}
       slot="aui_directive-image"
       src={src}

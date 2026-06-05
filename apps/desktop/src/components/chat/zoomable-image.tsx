@@ -150,7 +150,7 @@ function ImageActionButton({
     <button
       aria-label={saving ? 'Saving image' : 'Download image'}
       className={cn(
-        'absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-border/70 bg-background/80 text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 disabled:opacity-50',
+        'absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-border bg-background text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 disabled:opacity-50',
         variant === 'inline' ? 'group-hover/image:opacity-100' : 'group-hover/lightbox:opacity-100'
       )}
       disabled={saving}

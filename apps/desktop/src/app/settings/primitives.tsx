@@ -91,7 +91,7 @@ export function ListRow({
             {description}
           </div>
         )}
-        {hint && <div className="mt-1 block font-mono text-[0.68rem] text-muted-foreground/45">{hint}</div>}
+        {hint && <div className="mt-1 block font-mono text-[0.68rem] text-muted-foreground">{hint}</div>}
         {below}
       </div>
       {action && <div className={cn('min-w-0', !wide && 'sm:justify-self-end')}>{action}</div>}

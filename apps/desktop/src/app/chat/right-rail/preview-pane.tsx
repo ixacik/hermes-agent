@@ -84,7 +84,7 @@ function PreviewLoadError({
       body={
         <>
           <a
-            className="pointer-events-auto block font-mono text-muted-foreground/90 underline decoration-current/20 underline-offset-4 transition-colors hover:text-foreground"
+            className="pointer-events-auto block font-mono text-muted-foreground underline decoration-current underline-offset-4 transition-colors hover:text-foreground"
             href={error.url}
             onClick={event => {
               event.preventDefault()
@@ -94,7 +94,7 @@ function PreviewLoadError({
             {compactUrl(error.url)}
             {error.code ? ` (${error.code})` : ''}
           </a>
-          <div className="mt-1 text-[0.6875rem] text-muted-foreground/70">{error.description}</div>
+          <div className="mt-1 text-[0.6875rem] text-muted-foreground">{error.description}</div>
         </>
       }
       consoleHeight={consoleHeight}
@@ -606,11 +606,11 @@ export function PreviewPane({
     <aside className="relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-transparent text-muted-foreground">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {!embedded && (
-          <div className="pointer-events-none flex min-h-(--titlebar-height) items-center gap-1.5 border-b border-border/60 bg-background px-2 py-1">
+          <div className="pointer-events-none flex min-h-(--titlebar-height) items-center gap-1.5 border-b border-border bg-background px-2 py-1">
             <div className="min-w-0 flex-1">
               <Tip label={`Open ${currentUrl}`}>
                 <a
-                  className="pointer-events-auto inline max-w-full truncate text-left text-xs font-medium text-foreground underline-offset-4 decoration-current/20 transition-colors hover:text-primary hover:underline"
+                  className="pointer-events-auto inline max-w-full truncate text-left text-xs font-medium text-foreground underline-offset-4 decoration-current transition-colors hover:text-primary hover:underline"
                   href={currentUrl}
                   rel="noreferrer"
                   target="_blank"

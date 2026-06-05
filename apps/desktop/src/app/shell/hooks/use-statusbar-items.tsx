@@ -222,7 +222,7 @@ export function useStatusbarItems({
   const coreLeftStatusbarItems = useMemo<readonly StatusbarItem[]>(
     () => [
       {
-        className: `w-7 justify-center px-0${commandCenterOpen ? ' bg-accent/55 text-foreground' : ''}`,
+        className: `w-7 justify-center px-0${commandCenterOpen ? ' bg-accent text-foreground' : ''}`,
         icon: <Command className="size-3.5" />,
         id: 'command-center',
         onSelect: toggleCommandCenter,
@@ -242,7 +242,7 @@ export function useStatusbarItems({
       },
       {
         className: cn(
-          agentsOpen && 'bg-accent/55 text-foreground',
+          agentsOpen && 'bg-accent text-foreground',
           bgFailed > 0 && 'text-destructive hover:text-destructive'
         ),
         detail:

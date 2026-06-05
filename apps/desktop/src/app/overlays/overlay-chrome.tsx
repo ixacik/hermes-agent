@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export const overlayCardClass =
-  'rounded-lg border border-[color-mix(in_srgb,var(--dt-border)_52%,transparent)] bg-[color-mix(in_srgb,var(--dt-card)_72%,transparent)] shadow-[inset_0_0.0625rem_0_color-mix(in_srgb,white_34%,transparent)]'
+  'rounded-lg border border-border bg-card shadow-[inset_0_0.0625rem_0_color-mix(in_srgb,white_34%,transparent)]'
 
 interface OverlayCardProps extends ComponentProps<'div'> {
   children: ReactNode
@@ -33,11 +33,11 @@ export function OverlayActionButton({
       className={cn(
         'inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium transition-colors disabled:cursor-default disabled:opacity-45',
         tone === 'default' &&
-          'border-[color-mix(in_srgb,var(--dt-border)_55%,transparent)] bg-[color-mix(in_srgb,var(--dt-card)_80%,transparent)] text-foreground hover:bg-[color-mix(in_srgb,var(--dt-muted)_46%,var(--dt-card))]',
+          'border-border bg-card text-foreground hover:bg-[color-mix(in_srgb,var(--dt-muted)_46%,var(--dt-card))]',
         tone === 'subtle' &&
-          'h-7 border-transparent px-2 text-muted-foreground hover:border-[color-mix(in_srgb,var(--dt-border)_54%,transparent)] hover:bg-[color-mix(in_srgb,var(--dt-card)_72%,transparent)] hover:text-foreground',
+          'h-7 border-transparent px-2 text-muted-foreground hover:border-border hover:bg-card hover:text-foreground',
         tone === 'danger' &&
-          'h-7 border-transparent px-2 text-destructive hover:border-[color-mix(in_srgb,var(--dt-destructive)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--dt-destructive)_10%,transparent)] hover:text-destructive',
+          'h-7 border-transparent px-2 text-destructive hover:border-(--ui-border-error) hover:bg-(--ui-bg-error) hover:text-destructive',
         className
       )}
       type={type}

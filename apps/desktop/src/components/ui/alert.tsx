@@ -10,11 +10,11 @@ const alertVariants = cva(
       variant: {
         default: 'border-border',
         destructive:
-          'border-destructive/35 bg-[color-mix(in_srgb,var(--dt-card)_96%,var(--dt-destructive)_4%)] [&>svg]:text-destructive',
+          'border-(--ui-border-error) bg-[color-mix(in_srgb,var(--dt-card)_96%,var(--dt-destructive)_4%)] [&>svg]:text-destructive',
         warning:
-          'border-primary/30 bg-[color-mix(in_srgb,var(--dt-card)_96%,var(--dt-primary)_4%)] [&>svg]:text-primary',
+          'border-(--dt-ring) bg-[color-mix(in_srgb,var(--dt-card)_96%,var(--dt-primary)_4%)] [&>svg]:text-primary',
         success:
-          'border-primary/25 bg-[color-mix(in_srgb,var(--dt-card)_97%,var(--dt-primary)_3%)] [&>svg]:text-primary'
+          'border-(--dt-ring) bg-[color-mix(in_srgb,var(--dt-card)_97%,var(--dt-primary)_3%)] [&>svg]:text-primary'
       }
     },
     defaultVariants: {

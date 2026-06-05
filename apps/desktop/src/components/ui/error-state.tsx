@@ -22,7 +22,7 @@ export function ErrorState({ children, className, description, icon, title }: Er
   return (
     <div className={cn('grid gap-5', className)}>
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-(--ui-bg-error) text-destructive">
           {icon ?? <AlertCircle className="size-7" />}
         </span>
 

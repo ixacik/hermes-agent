@@ -1,11 +1,16 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vitest/config'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
 export default defineConfig({
   base: './',
-  plugins: [react(), tailwindcss()],
+  // React Compiler (babel-plugin-react-compiler) auto-memoizes components and
+  // hooks at build time, eliminating the manual React.memo/useMemo churn — this
+  // is the canonical @vitejs/plugin-react v6+ wiring (reactCompilerPreset run
+  // through @rolldown/plugin-babel). React 19 needs no target/runtime option.
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
   build: {
     // Keep desktop packaging stable: Shiki ships many dynamic chunks by
     // default, and electron-builder can OOM scanning thousands of files.
@@ -39,5 +44,15 @@ export default defineConfig({
   preview: {
     host: '127.0.0.1',
     port: 4174
+  },
+  // Vitest: jsdom + a setup file that shims localStorage/sessionStorage, which
+  // vitest's jsdom omits under Node 25 (caused ~57 store-test failures).
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
+    // Only our renderer tests. Excludes vendored native-dep tests under
+    // build/native-deps (node-pty) and the electron/*.test.cjs main-process
+    // tests (run separately via `node --test`, see test:desktop:platforms).
+    include: ['src/**/*.{test,spec}.{ts,tsx}']
   }
 })

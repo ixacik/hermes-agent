@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { HermesGateway } from '@/hermes'
 import type { ComposerAttachment } from '@/store/composer'
 
@@ -34,6 +36,7 @@ export interface ChatBarProps {
   maxRecordingSeconds?: number
   state: ChatBarState
   gateway?: HermesGateway | null
+  modelMenuContent?: ReactNode
   queueSessionKey?: string | null
   sessionId?: string | null
   cwd?: string | null

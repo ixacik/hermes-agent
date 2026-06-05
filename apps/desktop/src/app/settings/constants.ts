@@ -1,17 +1,13 @@
 import {
   Brain,
-  type IconComponent,
   Lock,
   MessageCircle,
   Mic,
   Monitor,
-  Moon,
   Palette,
   Sparkles,
-  Sun,
   Wrench
 } from '@/lib/icons'
-import type { ThemeMode } from '@/themes/context'
 
 import type { DesktopConfigSection } from './types'
 
@@ -452,16 +448,4 @@ export const SECTIONS: DesktopConfigSection[] = [
       'delegation.reasoning_effort'
     ]
   }
-]
-
-export interface ModeOption {
-  id: ThemeMode
-  label: string
-  icon: IconComponent
-}
-
-export const MODE_OPTIONS: ModeOption[] = [
-  { id: 'light', label: 'Light', icon: Sun },
-  { id: 'dark', label: 'Dark', icon: Moon },
-  { id: 'system', label: 'System', icon: Monitor }
 ]

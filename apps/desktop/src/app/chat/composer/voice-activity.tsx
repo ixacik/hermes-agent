@@ -174,23 +174,23 @@ export function VoiceActivity({ state }: { state: VoiceActivityState }) {
     <div
       aria-live="polite"
       className={cn(
-        'flex h-8 items-center gap-2 rounded-xl border border-border/55 bg-muted/55 px-2.5 text-xs text-muted-foreground',
-        'shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-sm'
+        'flex h-8 items-center gap-2 rounded-xl border border-border bg-muted px-2.5 text-xs text-muted-foreground',
+        'shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]'
       )}
       role="status"
     >
       <div
         className={cn(
           'flex size-5 shrink-0 items-center justify-center rounded-full',
-          recording ? 'bg-primary/15 text-primary' : 'bg-primary/10 text-primary'
+          recording ? 'bg-(--ui-bg-selected) text-primary' : 'bg-(--ui-bg-selected) text-primary'
         )}
       >
         {recording ? <Mic size={12} /> : <Loader2 className="animate-spin" size={12} />}
       </div>
 
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate font-medium text-foreground/85">{title}</span>
-        <span className="font-mono text-[0.6875rem] text-muted-foreground/85">
+        <span className="truncate font-medium text-(--ui-text-secondary)">{title}</span>
+        <span className="font-mono text-[0.6875rem] text-muted-foreground">
           {formatElapsed(state.elapsedSeconds)}
         </span>
       </div>
@@ -219,17 +219,17 @@ export function VoicePlaybackActivity() {
     <div
       aria-live="polite"
       className={cn(
-        'flex h-8 items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-2.5 text-xs text-primary',
-        'shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-sm'
+        'flex h-8 items-center gap-2 rounded-xl border border-(--dt-ring) bg-(--ui-bg-selected) px-2.5 text-xs text-primary',
+        'shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]'
       )}
       role="status"
     >
-      <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+      <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--ui-bg-selected) text-primary">
         {preparing ? <Loader2 className="animate-spin" size={12} /> : <Volume2 size={12} />}
       </div>
 
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate font-medium text-foreground/85">{title}</span>
+        <span className="truncate font-medium text-(--ui-text-secondary)">{title}</span>
         {!preparing && <PlaybackWaveform audioElement={playback.audioElement} />}
       </div>
 

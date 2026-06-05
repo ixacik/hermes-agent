@@ -38,7 +38,7 @@ export function UrlDialog({
         <DialogHeader className="flex-row items-center gap-3 sm:items-center">
           <span
             aria-hidden
-            className="grid size-9 shrink-0 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--dt-primary)_14%,transparent)] text-primary ring-1 ring-inset ring-primary/15"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-(--ui-bg-selected) text-primary ring-1 ring-inset ring-[var(--dt-ring)]"
           >
             <Globe className="size-4" />
           </span>
@@ -66,7 +66,7 @@ export function UrlDialog({
               value={value}
             />
             {trimmed.length > 0 && !looksLikeUrl && (
-              <p className="text-xs text-muted-foreground/85">
+              <p className="text-xs text-muted-foreground">
                 Include the full URL, e.g. <span className="font-mono">https://…</span>
               </p>
             )}

@@ -92,7 +92,7 @@ export function ChatPreviewRail({ onRestartServer, setTitlebarToolGroup }: ChatP
             return (
               <div
                 className={cn(
-                  'group/tab relative flex h-full min-w-0 max-w-48 shrink-0 items-center text-[0.6875rem] font-medium [-webkit-app-region:no-drag] last:border-r last:border-(--ui-stroke-quaternary)',
+                  'group/tab relative flex h-full min-w-0 max-w-48 shrink-0 items-center rounded-lg text-[0.6875rem] font-medium [-webkit-app-region:no-drag] last:border-r last:border-(--ui-stroke-quaternary)',
                   active
                     ? 'bg-(--ui-editor-surface-background) text-foreground [--tab-bg:var(--ui-editor-surface-background)]'
                     : 'border-r border-(--ui-stroke-quaternary) text-(--ui-text-tertiary) [--tab-bg:var(--ui-sidebar-surface-background)] hover:bg-(--chrome-action-hover) hover:text-foreground'

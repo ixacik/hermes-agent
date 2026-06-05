@@ -70,7 +70,7 @@ export function ContextMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-60" side="top" sideOffset={10}>
-          <DropdownMenuLabel className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground/85">
+          <DropdownMenuLabel className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
             Attach
           </DropdownMenuLabel>
           <ContextMenuItem disabled={!onPickFiles} icon={FileText} onSelect={onPickFiles}>
@@ -97,8 +97,8 @@ export function ContextMenu({
 
           <DropdownMenuSeparator />
 
-          <div className="px-2 py-1 text-[0.7rem] text-muted-foreground/80">
-            Tip: type <kbd className="rounded bg-muted/70 px-1 py-px font-mono text-[0.65rem]">@</kbd> to reference
+          <div className="px-2 py-1 text-[0.7rem] text-muted-foreground">
+            Tip: type <kbd className="rounded-lg bg-muted px-1 py-px font-mono text-[0.65rem]">@</kbd> to reference
             files inline.
           </div>
         </DropdownMenuContent>

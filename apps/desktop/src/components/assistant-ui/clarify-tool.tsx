@@ -42,7 +42,7 @@ function RadioDot({ selected }: { selected: boolean }) {
       aria-hidden
       className={cn(
         'grid size-3.5 shrink-0 place-items-center rounded-full border transition-colors',
-        selected ? 'border-primary' : 'border-muted-foreground/40'
+        selected ? 'border-primary' : 'border-border'
       )}
     >
       {selected && <span className="size-1.5 rounded-full bg-primary" />}
@@ -160,19 +160,19 @@ function ClarifyToolPending({ args }: ToolCallMessagePartProps) {
 
   return (
     <div
-      className="relative mb-3 mt-2 grid gap-2 rounded-[0.5rem] border border-border/70 bg-card/40 px-3 py-2.5 text-sm shadow-[inset_0_1px_0_color-mix(in_srgb,var(--foreground)_3%,transparent)]"
+      className="relative mb-3 mt-2 grid gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm shadow-[inset_0_1px_0_color-mix(in_srgb,var(--foreground)_3%,transparent)]"
       data-slot="clarify-inline"
     >
       <span aria-hidden className="arc-border" />
       <div className="flex items-center gap-2.5">
         <span
           aria-hidden
-          className="grid size-6 shrink-0 place-items-center rounded-md bg-[color-mix(in_srgb,var(--dt-primary)_14%,transparent)] text-primary ring-1 ring-inset ring-primary/15"
+          className="grid size-6 shrink-0 place-items-center rounded-md bg-(--ui-bg-selected) text-primary ring-1 ring-inset ring-[var(--dt-ring)]"
         >
           <HelpCircle className="size-3.5" />
         </span>
         <span className="flex-1 whitespace-pre-wrap font-medium leading-snug text-foreground">
-          {question || <em className="font-normal text-muted-foreground/70">Loading question…</em>}
+          {question || <em className="font-normal text-muted-foreground">Loading question…</em>}
         </span>
       </div>
 
@@ -182,8 +182,8 @@ function ClarifyToolPending({ args }: ToolCallMessagePartProps) {
             <button
               className={cn(
                 OPTION_ROW_CLASS,
-                'text-foreground/95 hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-55',
-                selectedChoice === choice && 'bg-accent/60'
+                'text-(--ui-text-secondary) hover:bg-accent disabled:cursor-not-allowed disabled:opacity-55',
+                selectedChoice === choice && 'bg-accent'
               )}
               data-choice
               disabled={!ready || submitting}
@@ -200,7 +200,7 @@ function ClarifyToolPending({ args }: ToolCallMessagePartProps) {
             </button>
           ))}
           <button
-            className={cn(OPTION_ROW_CLASS, 'text-muted-foreground hover:bg-accent/40 hover:text-foreground')}
+            className={cn(OPTION_ROW_CLASS, 'text-muted-foreground hover:bg-accent hover:text-foreground')}
             disabled={submitting}
             onClick={() => {
               setTyping(true)
@@ -217,7 +217,7 @@ function ClarifyToolPending({ args }: ToolCallMessagePartProps) {
       {(typing || !hasChoices) && (
         <form className="grid gap-2" onSubmit={handleSubmitFreeform}>
           <Textarea
-            className="min-h-20 resize-y rounded-lg border-transparent bg-accent/40 text-sm focus-visible:bg-background/60"
+            className="min-h-20 resize-y rounded-lg border-transparent bg-accent text-sm focus-visible:bg-background"
             disabled={submitting}
             onChange={event => setDraft(event.target.value)}
             onKeyDown={handleTextareaKey}
@@ -226,7 +226,7 @@ function ClarifyToolPending({ args }: ToolCallMessagePartProps) {
             value={draft}
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[0.6875rem] text-muted-foreground/85">⌘/Ctrl + Enter to send</span>
+            <span className="text-[0.6875rem] text-muted-foreground">⌘/Ctrl + Enter to send</span>
             <div className="flex items-center gap-1.5">
               {hasChoices && (
                 <Button
@@ -262,7 +262,7 @@ function ClarifyToolPending({ args }: ToolCallMessagePartProps) {
       {!typing && hasChoices && (
         <div className="flex justify-end">
           <button
-            className="bg-transparent text-[0.6875rem] text-muted-foreground/70 underline-offset-4 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-transparent text-[0.6875rem] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!ready || submitting}
             onClick={() => void respond('')}
             type="button"

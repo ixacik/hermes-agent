@@ -89,7 +89,7 @@ export function AboutSettings() {
   return (
     <SettingsContent>
       <div className="flex flex-col items-center gap-3 pt-6 pb-2 text-center">
-        <span className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="flex size-16 items-center justify-center rounded-2xl bg-(--ui-bg-selected) text-primary">
           <Sparkles className="size-8" />
         </span>
         <div>
@@ -106,9 +106,9 @@ export function AboutSettings() {
         <div
           className={cn(
             'rounded-xl border px-4 py-3 text-sm',
-            statusTone === 'available' && 'border-primary/30 bg-primary/5 text-foreground',
-            statusTone === 'error' && 'border-destructive/35 bg-destructive/5 text-destructive',
-            statusTone === 'idle' && 'border-border/70 bg-muted/20 text-foreground'
+            statusTone === 'available' && 'border-(--dt-ring) bg-(--ui-bg-selected) text-foreground',
+            statusTone === 'error' && 'border-(--ui-border-error) bg-(--ui-bg-error) text-destructive',
+            statusTone === 'idle' && 'border-border bg-muted text-foreground'
           )}
         >
           <div className="min-w-0">

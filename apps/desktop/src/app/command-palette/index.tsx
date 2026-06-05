@@ -21,21 +21,17 @@ import {
   Info,
   KeyRound,
   MessageCircle,
-  Monitor,
-  Moon,
   Package,
-  Palette,
   Plus,
   Settings,
   Settings2,
-  Sun,
   Users,
   Wrench,
   Zap
 } from '@/lib/icons'
+import { REMOTE_ONLY } from '@/lib/remote-only'
 import { cn } from '@/lib/utils'
 import { $commandPaletteOpen, closeCommandPalette, setCommandPaletteOpen } from '@/store/command-palette'
-import { type ThemeMode, useTheme } from '@/themes/context'
 
 import {
   AGENTS_ROUTE,
@@ -123,12 +119,6 @@ const NON_CONFIG_SETTINGS: ReadonlyArray<{ icon: IconComponent; keywords?: strin
   { icon: Info, keywords: ['version', 'about'], label: 'About', tab: 'about' }
 ]
 
-const THEME_MODES: ReadonlyArray<{ icon: IconComponent; label: string; mode: ThemeMode }> = [
-  { icon: Sun, label: 'Light', mode: 'light' },
-  { icon: Moon, label: 'Dark', mode: 'dark' },
-  { icon: Monitor, label: 'System', mode: 'system' }
-]
-
 function fieldLabel(key: string): string {
   return FIELD_LABELS[key] ?? prettyName(key.split('.').pop() ?? key)
 }
@@ -136,7 +126,6 @@ function fieldLabel(key: string): string {
 export function CommandPalette() {
   const open = useStore($commandPaletteOpen)
   const navigate = useNavigate()
-  const { availableThemes, mode, resolvedMode, setMode, setTheme, themeName } = useTheme()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState<string | null>(null)
 
@@ -200,7 +189,9 @@ export function CommandPalette() {
           { icon: MessageCircle, id: 'nav-messaging', label: 'Messaging', run: go(MESSAGING_ROUTE) },
           { icon: Package, id: 'nav-artifacts', label: 'Artifacts', run: go(ARTIFACTS_ROUTE) },
           { icon: Clock, id: 'nav-cron', keywords: ['schedule', 'jobs'], label: 'Cron', run: go(CRON_ROUTE) },
-          { icon: Users, id: 'nav-profiles', label: 'Profiles', run: go(PROFILES_ROUTE) },
+          // Remote-only fork: profiles isolate local HERMES_HOME dirs; meaningless
+          // against a single remote gateway, so keep this out of the palette.
+          ...(REMOTE_ONLY ? [] : [{ icon: Users, id: 'nav-profiles', label: 'Profiles', run: go(PROFILES_ROUTE) }]),
           { icon: Cpu, id: 'nav-agents', label: 'Agents', run: go(AGENTS_ROUTE) }
         ]
       },
@@ -227,28 +218,6 @@ export function CommandPalette() {
             keywords: ['command center', 'usage', 'tokens', 'cost'],
             label: 'Usage',
             run: go(`${COMMAND_CENTER_ROUTE}?section=usage`)
-          }
-        ]
-      },
-      {
-        // Declared before Settings: cmdk keeps group order, so this keeps the
-        // theme/mode pickers on top for "theme"/"color" queries instead of
-        // buried under a fuzzy Settings match.
-        heading: 'Appearance',
-        items: [
-          {
-            icon: Palette,
-            id: 'appearance-theme',
-            keywords: ['theme', 'appearance', 'color', 'palette', 'skin', 'dark', 'light', 'look'],
-            label: 'Change theme…',
-            to: 'theme'
-          },
-          {
-            icon: Sun,
-            id: 'appearance-mode',
-            keywords: ['appearance', 'color mode', 'brightness', 'dark', 'light', 'system'],
-            label: 'Change color mode…',
-            to: 'color-mode'
           }
         ]
       },
@@ -341,52 +310,9 @@ export function CommandPalette() {
   const groups = useMemo(() => [...baseGroups, ...searchGroups], [baseGroups, searchGroups])
 
   // Nested palette pages (VS Code-style submenus). Reusable: add an entry here
-  // and point a root item at it via `to`.
-  const subPages = useMemo<Record<string, PalettePage>>(
-    () => ({
-      theme: {
-        title: 'Theme',
-        placeholder: 'Choose a theme…',
-        // Skins aren't inherently light/dark — the same skin renders in either
-        // mode. Group by appearance so picking an entry sets skin + mode at
-        // once, and keep the palette open so each pick previews live.
-        groups: (['light', 'dark'] as const).map(groupMode => ({
-          heading: groupMode === 'light' ? 'Light' : 'Dark',
-          items: availableThemes.map(theme => ({
-            active: themeName === theme.name && resolvedMode === groupMode,
-            icon: groupMode === 'light' ? Sun : Moon,
-            id: `theme-${theme.name}-${groupMode}`,
-            keepOpen: true,
-            keywords: ['theme', 'appearance', 'palette', groupMode, theme.label, theme.description ?? ''],
-            label: theme.label,
-            run: () => {
-              setTheme(theme.name)
-              setMode(groupMode)
-            }
-          }))
-        }))
-      },
-      'color-mode': {
-        title: 'Color mode',
-        placeholder: 'Choose color mode…',
-        groups: [
-          {
-            heading: 'Color mode',
-            items: THEME_MODES.map(entry => ({
-              active: mode === entry.mode,
-              icon: entry.icon,
-              id: `mode-${entry.mode}`,
-              keepOpen: true,
-              keywords: ['appearance', 'brightness', entry.label],
-              label: entry.label,
-              run: () => setMode(entry.mode)
-            }))
-          }
-        ]
-      }
-    }),
-    [availableThemes, mode, resolvedMode, setMode, setTheme, themeName]
-  )
+  // and point a root item at it via `to`. (Theme/color-mode pages were removed
+  // with the theme system — this build is monochrome dark only.)
+  const subPages = useMemo<Record<string, PalettePage>>(() => ({}), [])
 
   const activePage = page ? subPages[page] : null
   const visibleGroups = activePage ? activePage.groups : groups
@@ -410,7 +336,7 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root onOpenChange={setCommandPaletteOpen} open={open}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[200] bg-black/15 backdrop-blur-[1px] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[200] bg-black/70-[1px] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className="fixed left-1/2 top-[14vh] z-[210] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-chat-bubble-background) shadow-lg duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-2 data-[state=open]:zoom-in-95"
@@ -425,7 +351,7 @@ export function CommandPalette() {
               >
                 <ChevronLeft className="size-3.5" />
                 <span>Back</span>
-                <span className="text-muted-foreground/50">/</span>
+                <span className="text-muted-foreground">/</span>
                 <span className="font-medium text-foreground">{activePage.title}</span>
               </button>
             )}
@@ -451,7 +377,7 @@ export function CommandPalette() {
               <CommandEmpty>No results found.</CommandEmpty>
               {visibleGroups.map(group => (
                 <CommandGroup
-                  className="**:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-[0.6875rem] **:[[cmdk-group-heading]]:text-muted-foreground/70"
+                  className="**:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-[0.6875rem] **:[[cmdk-group-heading]]:text-muted-foreground"
                   heading={group.heading}
                   key={group.heading}
                 >
@@ -469,7 +395,7 @@ export function CommandPalette() {
                         <Icon className="size-4 shrink-0 text-muted-foreground" />
                         <span className="truncate">{item.label}</span>
                         {item.to ? (
-                          <ChevronRight className="ml-auto size-4 shrink-0 text-muted-foreground/70" />
+                          <ChevronRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
                         ) : (
                           <Check className={cn('ml-auto size-4 text-foreground', !item.active && 'invisible')} />
                         )}

@@ -8,7 +8,6 @@ import { DesktopInstallOverlay } from '@/components/desktop-install-overlay'
 import { DesktopOnboardingOverlay } from '@/components/desktop-onboarding-overlay'
 import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overlay'
 import { Pane, PaneMain } from '@/components/pane-shell'
-import { useSkinCommand } from '@/themes/use-skin-command'
 
 import { formatRefValue } from '../components/assistant-ui/directive-text'
 import { getSessionMessages, listAllProfileSessions, type SessionInfo } from '../hermes'
@@ -71,7 +70,7 @@ import { ModelVisibilityOverlay } from './model-visibility-overlay'
 import { RightSidebarPane } from './right-sidebar'
 import { $terminalTakeover } from './right-sidebar/store'
 import { PersistentTerminal, TerminalSlot } from './right-sidebar/terminal/persistent'
-import { NEW_CHAT_ROUTE, routeSessionId, sessionRoute, SETTINGS_ROUTE } from './routes'
+import { CRON_ROUTE, NEW_CHAT_ROUTE, routeSessionId, sessionRoute, SETTINGS_ROUTE } from './routes'
 import { useContextSuggestions } from './session/hooks/use-context-suggestions'
 import { useCwdActions } from './session/hooks/use-cwd-actions'
 import { useHermesConfig } from './session/hooks/use-hermes-config'
@@ -84,8 +83,6 @@ import { useSessionActions } from './session/hooks/use-session-actions'
 import { useSessionStateCache } from './session/hooks/use-session-state-cache'
 import { AppShell } from './shell/app-shell'
 import { useOverlayRouting } from './shell/hooks/use-overlay-routing'
-import { useStatusSnapshot } from './shell/hooks/use-status-snapshot'
-import { useStatusbarItems } from './shell/hooks/use-statusbar-items'
 import { ModelMenuPanel } from './shell/model-menu-panel'
 import type { StatusbarItem } from './shell/statusbar-controls'
 import type { TitlebarTool } from './shell/titlebar-controls'
@@ -155,7 +152,6 @@ export function DesktopController() {
     cronOpen,
     currentView,
     openAgents,
-    openCommandCenterSection,
     profilesOpen,
     settingsOpen,
     toggleCommandCenter
@@ -200,6 +196,31 @@ export function DesktopController() {
       stopUpdatePoller()
     }
   }, [])
+
+  // Items that used to live in the bottom status bar are now reachable from the
+  // native application menu (Go ▸ …). The main process forwards each click here.
+  useEffect(() => {
+    const unsubscribe = window.hermesDesktop?.onMenuAction?.(action => {
+      switch (action) {
+        case 'command-center':
+          toggleCommandCenter()
+
+          break
+
+        case 'agents':
+          openAgents()
+
+          break
+
+        case 'cron':
+          navigate(CRON_ROUTE)
+
+          break
+      }
+    })
+
+    return () => unsubscribe?.()
+  }, [navigate, openAgents, toggleCommandCenter])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -314,7 +335,6 @@ export function DesktopController() {
     }
   }, [])
 
-  const { gatewayLogLines, inferenceStatus, statusSnapshot } = useStatusSnapshot(gatewayState, requestGateway)
 
   const updateActiveSessionRuntimeInfo = useCallback(
     (info: { branch?: string; cwd?: string }) => {
@@ -548,8 +568,6 @@ export function DesktopController() {
     [requestGateway, startFreshSessionDraft]
   )
 
-  const handleSkinCommand = useSkinCommand()
-
   const { cancelRun, editMessage, handleThreadMessagesChange, reloadFromMessage, submitText, transcribeVoiceAudio } =
     usePromptActions({
       activeSessionId,
@@ -557,7 +575,6 @@ export function DesktopController() {
       branchCurrentSession: branchInNewChat,
       busyRef,
       createBackendSessionForSend,
-      handleSkinCommand,
       refreshSessions,
       requestGateway,
       selectedStoredSessionIdRef,
@@ -600,23 +617,6 @@ export function DesktopController() {
     selectedStoredSessionId,
     selectedStoredSessionIdRef,
     startFreshSessionDraft
-  })
-
-  const { leftStatusbarItems, statusbarItems } = useStatusbarItems({
-    agentsOpen,
-    commandCenterOpen,
-    extraLeftItems: statusbarItemGroups.flat.left,
-    extraRightItems: statusbarItemGroups.flat.right,
-    gatewayLogLines,
-    gatewayState,
-    inferenceStatus,
-    modelMenuContent,
-    openAgents,
-    freshDraftReady,
-    openCommandCenterSection,
-    requestGateway,
-    statusSnapshot,
-    toggleCommandCenter
   })
 
   const sidebar = (
@@ -710,6 +710,7 @@ export function DesktopController() {
     <ChatView
       gateway={gatewayRef.current}
       maxVoiceRecordingSeconds={voiceMaxRecordingSeconds}
+      modelMenuContent={modelMenuContent}
       onAddContextRef={composer.addContextRefAttachment}
       onAddUrl={url => composer.addContextRefAttachment(`@url:${formatRefValue(url)}`, url)}
       onAttachDroppedItems={composer.attachDroppedItems}
@@ -785,11 +786,9 @@ export function DesktopController() {
 
   return (
     <AppShell
-      leftStatusbarItems={leftStatusbarItems}
       leftTitlebarTools={titlebarToolGroups.flat.left}
       onOpenSettings={openSettings}
       overlays={overlays}
-      statusbarItems={statusbarItems}
       titlebarTools={titlebarToolGroups.flat.right}
     >
       <Pane

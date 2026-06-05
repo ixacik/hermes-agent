@@ -33,7 +33,7 @@ function PaginationButton({ className, isActive, ...props }: PaginationButtonPro
     <button
       aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'inline-flex h-5 min-w-5 items-center justify-center rounded border border-transparent px-1 text-[0.6875rem] leading-none tabular-nums transition-colors disabled:pointer-events-none disabled:opacity-45',
+        'inline-flex h-5 min-w-5 items-center justify-center rounded-lg border border-transparent px-1 text-[0.6875rem] leading-none tabular-nums transition-colors disabled:pointer-events-none disabled:opacity-45',
         isActive
           ? 'border-border bg-background text-foreground shadow-xs'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -52,7 +52,7 @@ function PaginationPrevious({ className, ...props }: React.ComponentProps<'butto
     <button
       aria-label="Go to previous page"
       className={cn(
-        'inline-flex h-5 items-center justify-center gap-0.5 rounded border border-transparent px-1 text-[0.6875rem] leading-none text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-45',
+        'inline-flex h-5 items-center justify-center gap-0.5 rounded-lg border border-transparent px-1 text-[0.6875rem] leading-none text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-45',
         className
       )}
       data-slot="pagination-previous"
@@ -70,7 +70,7 @@ function PaginationNext({ className, ...props }: React.ComponentProps<'button'>)
     <button
       aria-label="Go to next page"
       className={cn(
-        'inline-flex h-5 items-center justify-center gap-0.5 rounded border border-transparent px-1 text-[0.6875rem] leading-none text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-45',
+        'inline-flex h-5 items-center justify-center gap-0.5 rounded-lg border border-transparent px-1 text-[0.6875rem] leading-none text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-45',
         className
       )}
       data-slot="pagination-next"

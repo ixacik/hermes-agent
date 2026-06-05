@@ -191,7 +191,7 @@ interface FilesystemTabProps extends FileTreeBodyProps {
 // base focus ring come from <Button size="icon-xs">. This constant exists
 // purely to share the sidebar palette + the hover-reveal behavior below.
 const HEADER_ACTION_CLASS =
-  'text-sidebar-foreground/70 hover:bg-sidebar-accent! hover:text-sidebar-accent-foreground! focus-visible:ring-sidebar-ring'
+  'text-sidebar-foreground hover:bg-sidebar-accent! hover:text-sidebar-accent-foreground! focus-visible:ring-sidebar-ring'
 
 const HEADER_ACTION_REVEAL_CLASS = `${HEADER_ACTION_CLASS} pointer-events-none opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within/project-header:pointer-events-auto group-focus-within/project-header:opacity-100 group-hover/project-header:pointer-events-auto group-hover/project-header:opacity-100`
 
@@ -370,8 +370,8 @@ function FileTreeLoadingState() {
 function EmptyState({ body, title }: { body: string; title: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-4 text-center">
-      <div className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-muted-foreground/75">{title}</div>
-      <div className="text-[0.68rem] leading-relaxed text-muted-foreground/65">{body}</div>
+      <div className="text-[0.7rem] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{title}</div>
+      <div className="text-[0.68rem] leading-relaxed text-muted-foreground">{body}</div>
     </div>
   )
 }

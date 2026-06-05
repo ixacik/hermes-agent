@@ -9,6 +9,18 @@
 
 **The native desktop app for [Hermes Agent](../../README.md) — the self-improving AI agent from [Nous Research](https://nousresearch.com).** Same agent, same skills, same memory as the CLI and gateway, in a polished native window — chat with streaming tool output, side-by-side previews, a file browser, voice, and settings, no terminal required. Available for **macOS, Windows, and Linux**.
 
+> **This fork is a remote-only client.** It never starts a local Python backend — it only connects to a Hermes **gateway running elsewhere** (e.g. another machine on your LAN that runs the full agent suite). The heavy backend in this repo is left untouched so it keeps merging cleanly from upstream; it's simply never run from the desktop app. The remote-only behavior is gated behind a single flag — `apps/desktop/electron/remote-only.cjs` and `apps/desktop/src/lib/remote-only.ts` (flip to `false` to restore upstream's local+remote behavior).
+>
+> **Point it at your gateway** in **Settings → Gateway** (URL + session token, or OAuth sign-in), or via env vars at launch:
+>
+> ```bash
+> HERMES_DESKTOP_REMOTE_URL=https://your-box.lan:9119 \
+> HERMES_DESKTOP_REMOTE_TOKEN=<session-token> \
+> npm run dev
+> ```
+>
+> All the backend config (LLM keys, tools, messaging, etc.) lives on the machine running the gateway — not in this client.
+
 <table>
 <tr><td><b>Chat with the full agent</b></td><td>Streaming responses, live tool activity, structured tool summaries, and the same conversation history as every other Hermes surface.</td></tr>
 <tr><td><b>Side-by-side previews</b></td><td>Render web pages, files, and tool outputs in a right-hand pane while you keep chatting.</td></tr>

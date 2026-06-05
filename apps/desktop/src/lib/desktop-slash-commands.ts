@@ -16,12 +16,6 @@ export interface DesktopSlashCompletion {
   text: string
 }
 
-export interface DesktopThemeCommandOption {
-  description: string
-  label: string
-  name: string
-}
-
 const DESKTOP_COMMAND_META = [
   ['/agents', 'Show active desktop sessions and running tasks'],
   ['/background', 'Run a prompt in the background'],
@@ -36,7 +30,6 @@ const DESKTOP_COMMAND_META = [
   ['/resume', 'Resume a saved session'],
   ['/retry', 'Retry the last user message'],
   ['/rollback', 'List or restore filesystem checkpoints'],
-  ['/skin', 'Switch desktop theme or cycle to the next one'],
   ['/status', 'Show current session status'],
   ['/steer', 'Steer the current run after the next tool call'],
   ['/stop', 'Stop running background processes'],
@@ -213,38 +206,6 @@ export function desktopSlashDescription(command: string, fallback = ''): string 
   const canonical = canonicalDesktopSlashCommand(command)
 
   return DESKTOP_COMMAND_DESCRIPTIONS.get(canonical) || fallback
-}
-
-export function desktopSkinSlashCompletions(
-  themes: DesktopThemeCommandOption[],
-  activeThemeName: string,
-  argPrefix: string
-): DesktopSlashCompletion[] {
-  const prefix = argPrefix.trim().toLowerCase()
-
-  const commands: DesktopSlashCompletion[] = [
-    {
-      text: '/skin list',
-      display: '/skin list',
-      meta: 'Show available desktop themes'
-    },
-    {
-      text: '/skin next',
-      display: '/skin next',
-      meta: 'Cycle to the next desktop theme'
-    },
-    ...themes.map(theme => ({
-      text: `/skin ${theme.name}`,
-      display: `/skin ${theme.name}`,
-      meta: `${theme.label}${theme.name === activeThemeName ? ' (current)' : ''} - ${theme.description}`
-    }))
-  ]
-
-  if (!prefix) {
-    return commands
-  }
-
-  return commands.filter(item => item.text.slice('/skin '.length).toLowerCase().startsWith(prefix))
 }
 
 export function filterDesktopCommandsCatalog(catalog: CommandsCatalogLike): CommandsCatalogLike {

@@ -67,7 +67,7 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
       <div className="group/attachment relative min-w-0 shrink-0">
         <button
           aria-label={canPreview ? `Preview ${attachment.label}` : attachment.label}
-          className="flex max-w-56 items-center gap-2 border border-border/60 bg-background/50 px-2 py-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-colors hover:border-primary/35 hover:bg-accent/45 disabled:cursor-default"
+          className="flex max-w-56 items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-colors hover:border-(--dt-ring) hover:bg-accent disabled:cursor-default"
           disabled={!canPreview}
           onClick={() => void openPreview()}
           type="button"
@@ -75,21 +75,21 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
           {attachment.previewUrl && attachment.kind === 'image' ? (
             <img
               alt={attachment.label}
-              className="size-8 shrink-0 border border-border/70 object-cover"
+              className="size-8 shrink-0 border border-border object-cover"
               draggable={false}
               src={attachment.previewUrl}
             />
           ) : (
-            <span className="grid size-8 shrink-0 place-items-center border border-border/55 bg-muted/35 text-muted-foreground">
+            <span className="grid size-8 shrink-0 place-items-center border border-border bg-muted text-muted-foreground">
               <Icon className="size-3.5" />
             </span>
           )}
           <span className="min-w-0">
-            <span className="block truncate text-[0.72rem] font-medium leading-4 text-foreground/90">
+            <span className="block truncate text-[0.72rem] font-medium leading-4 text-(--ui-text-secondary)">
               {attachment.label}
             </span>
             {detail && (
-              <span className="block truncate font-mono text-[0.6rem] leading-3 text-muted-foreground/65">
+              <span className="block truncate font-mono text-[0.6rem] leading-3 text-muted-foreground">
                 {detail}
               </span>
             )}
@@ -98,7 +98,7 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
         {onRemove && (
           <button
             aria-label={`Remove ${attachment.label}`}
-            className="absolute -right-1 -top-1 grid size-3.5 place-items-center rounded-full border border-border/70 bg-background text-muted-foreground opacity-0 shadow-xs transition hover:bg-accent hover:text-foreground group-hover/attachment:opacity-100 focus-visible:opacity-100"
+            className="absolute -right-1 -top-1 grid size-3.5 place-items-center rounded-full border border-border bg-background text-muted-foreground opacity-0 shadow-xs transition hover:bg-accent hover:text-foreground group-hover/attachment:opacity-100 focus-visible:opacity-100"
             onClick={() => onRemove(attachment.id)}
             type="button"
           >

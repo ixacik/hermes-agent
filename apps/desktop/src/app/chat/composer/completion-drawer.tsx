@@ -7,9 +7,9 @@ export const COMPLETION_DRAWER_CLASS = [
   'w-60 max-w-[calc(100vw-2rem)]',
   'max-h-[min(23rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain',
   'rounded-lg border border-(--ui-stroke-secondary)',
-  'bg-[color-mix(in_srgb,var(--ui-bg-elevated)_96%,transparent)]',
+  'bg-[var(--ui-bg-elevated)]',
   'p-1 text-xs text-popover-foreground shadow-md',
-  'backdrop-blur-md'
+  ''
 ].join(' ')
 
 export const COMPLETION_DRAWER_BELOW_CLASS = [
@@ -17,9 +17,9 @@ export const COMPLETION_DRAWER_BELOW_CLASS = [
   'w-60 max-w-[calc(100vw-2rem)]',
   'max-h-[min(23rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain',
   'rounded-lg border border-(--ui-stroke-secondary)',
-  'bg-[color-mix(in_srgb,var(--ui-bg-elevated)_96%,transparent)]',
+  'bg-[var(--ui-bg-elevated)]',
   'p-1 text-xs text-popover-foreground shadow-md',
-  'backdrop-blur-md'
+  ''
 ].join(' ')
 
 export const COMPLETION_DRAWER_ROW_CLASS = [

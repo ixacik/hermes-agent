@@ -95,7 +95,7 @@ function EnvVarField({ envVar, isSet, onSaved, onCleared }: EnvVarFieldProps) {
   }
 
   return (
-    <div className="grid gap-2 rounded-lg bg-background/55 p-2.5">
+    <div className="grid gap-2 rounded-lg bg-background p-2.5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -260,12 +260,12 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange }: ToolsetConfi
         const configured = providerConfigured(provider, envState)
 
         return (
-          <div className="overflow-hidden rounded-xl bg-background/60" key={provider.name}>
+          <div className="overflow-hidden rounded-xl bg-background" key={provider.name}>
             <button
               aria-pressed={isActive}
               className={cn(
-                'flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition hover:bg-accent/50',
-                isActive && 'bg-accent/40'
+                'flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition hover:bg-accent',
+                isActive && 'bg-accent'
               )}
               onClick={() => void handleSelect(provider)}
               type="button"
@@ -284,7 +284,7 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange }: ToolsetConfi
             </button>
 
             {isActive && (
-              <div className="grid gap-2 bg-muted/20 p-3">
+              <div className="grid gap-2 bg-muted p-3">
                 {provider.tag && <p className="text-[0.72rem] text-muted-foreground">{provider.tag}</p>}
                 {provider.requires_nous_auth && (
                   <p className="text-[0.72rem] text-muted-foreground">

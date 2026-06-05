@@ -2,7 +2,7 @@
 
 import type { SyntaxHighlighterProps } from '@assistant-ui/react-streamdown'
 import type { FC } from 'react'
-import ShikiHighlighter from 'react-shiki'
+import ShikiHighlighter from 'react-shiki/web'
 
 import {
   CodeCard,
@@ -21,8 +21,10 @@ import { codiconForLanguage, isLikelyProseCodeBlock, sanitizeLanguageTag } from 
  * `data-streamdown="code-block"` chrome from styles.css. Anything that wants
  * a card-shaped code surface should compose `CodeCard*` directly.
  *
- * `react-shiki` full bundle so all `bundledLanguages` work; theme switches
- * follow the document `color-scheme` via `defaultColor="light-dark()"`.
+ * `react-shiki/web` is the curated web bundle (~half the full bundle's size):
+ * bash, python, shell, sql, json, yaml, c/c++, java, php, html/css, js/ts/jsx,
+ * vue, svelte, graphql, xml, markdown, … (rust/go/toml/dockerfile fall back to
+ * plain text). Theme switches follow `color-scheme` via `defaultColor="light-dark()"`.
  */
 interface HermesSyntaxHighlighterProps extends SyntaxHighlighterProps {
   defer?: boolean

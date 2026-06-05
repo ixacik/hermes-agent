@@ -144,7 +144,7 @@ export function ProfilesView({ onClose }: ProfilesViewProps) {
               </Button>
             </div>
             {loadError && (
-              <div className="mb-1 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[0.66rem] text-destructive">
+              <div className="mb-1 flex items-start gap-2 rounded-md border border-(--ui-border-error) bg-(--ui-bg-error) px-2 py-1.5 text-[0.66rem] text-destructive">
                 <AlertTriangle className="mt-0.5 size-3 shrink-0" />
                 <span>{loadError}</span>
               </div>
@@ -170,7 +170,7 @@ export function ProfilesView({ onClose }: ProfilesViewProps) {
             ) : (
               <div className="grid h-full place-items-center px-6 py-12 text-center text-sm text-muted-foreground">
                 <div>
-                  <Users className="mx-auto size-6 text-muted-foreground/60" />
+                  <Users className="mx-auto size-6 text-muted-foreground" />
                   <p className="mt-3">Select a profile to view its details.</p>
                 </div>
               </div>
@@ -484,7 +484,7 @@ function SoulEditor({ profileName }: { profileName: string }) {
       )}
 
       {error && (
-        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+        <div className="flex items-start gap-2 rounded-md border border-(--ui-border-error) bg-(--ui-bg-error) px-3 py-2 text-xs text-destructive">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           <span>{error}</span>
         </div>

@@ -126,7 +126,7 @@ function StageRow({ descriptor, result, isCurrent, now }: StageRowProps) {
       case 'pending':
 
       default:
-        return <div className="h-2 w-2 rounded-full border border-muted-foreground/40" />
+        return <div className="h-2 w-2 rounded-full border border-border" />
     }
   }, [state])
 
@@ -136,8 +136,8 @@ function StageRow({ descriptor, result, isCurrent, now }: StageRowProps) {
     <li
       className={cn(
         'flex items-start gap-3 rounded-md px-3 py-2 transition-colors',
-        isCurrent && 'bg-muted/60',
-        state === 'failed' && 'bg-destructive/10'
+        isCurrent && 'bg-muted',
+        state === 'failed' && 'bg-(--ui-bg-error)'
       )}
     >
       <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center">{icon}</div>
@@ -348,7 +348,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
     const platformLabel = ups.platform === 'darwin' ? 'macOS' : ups.platform === 'linux' ? 'Linux' : ups.platform
 
     return (
-      <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-background/90 backdrop-blur-md">
+      <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-background">
         <div className="w-full max-w-xl rounded-xl border bg-card p-8 shadow-xl">
           <h2 className="text-2xl font-semibold tracking-tight">Hermes needs a one-time install</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -358,7 +358,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
 
           <div className="mt-4">
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Install command</div>
-            <pre className="overflow-x-auto rounded-md border bg-muted/50 px-3 py-2.5 font-mono text-[12px]">
+            <pre className="overflow-x-auto rounded-md border bg-muted px-3 py-2.5 font-mono text-[12px]">
               <code>{ups.installCommand}</code>
             </pre>
             <div className="mt-2 flex items-center gap-2">
@@ -385,7 +385,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
 
           <div className="mt-6 flex items-center justify-between border-t pt-4">
             <span className="text-xs text-muted-foreground">
-              Will install to <code className="rounded bg-muted/50 px-1 py-0.5 font-mono">{ups.activeRoot}</code>
+              Will install to <code className="rounded-lg bg-muted px-1 py-0.5 font-mono">{ups.activeRoot}</code>
             </span>
             <Button onClick={() => window.location.reload()} size="sm" variant="default">
               I{'\u2019'}ve run it -- retry
@@ -410,7 +410,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
   const currentElapsed = typeof currentStartedAt === 'number' ? formatElapsed(now - currentStartedAt) : ''
 
   return (
-    <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-background/90 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-background p-4">
       <div className="flex w-full max-w-2xl max-h-[90vh] flex-col rounded-xl border bg-card shadow-xl">
         {/* Header -- always visible, never scrolls */}
         <div className="flex-shrink-0 p-8 pb-4">
@@ -447,19 +447,19 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
           )}
 
           {totalCount === 0 && state.active && (
-            <div className="mb-4 flex items-center gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <div className="mb-4 flex items-center gap-2 rounded-md border border-dashed bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Fetching installer manifest...</span>
             </div>
           )}
 
           {failed && state.error && (
-            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
+            <div className="mb-4 rounded-md border border-(--ui-border-error) bg-(--ui-bg-error) p-3 text-sm">
               <div className="mb-1 flex items-center gap-1.5 font-medium text-destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <span>Error</span>
               </div>
-              <p className="whitespace-pre-wrap break-words text-foreground/90">{state.error}</p>
+              <p className="whitespace-pre-wrap break-words text-(--ui-text-secondary)">{state.error}</p>
             </div>
           )}
 
@@ -493,7 +493,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
             {logOpen && (
               <div
                 className={cn(
-                  'mt-2 overflow-auto rounded-md border bg-muted/30 p-2 font-mono text-[11px] leading-relaxed',
+                  'mt-2 overflow-auto rounded-md border bg-muted p-2 font-mono text-[11px] leading-relaxed',
                   failed ? 'max-h-96' : 'max-h-64'
                 )}
               >
@@ -509,7 +509,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
                         )}
                         key={i}
                       >
-                        {entry.stage ? <span className="text-muted-foreground/70">[{entry.stage}] </span> : null}
+                        {entry.stage ? <span className="text-muted-foreground">[{entry.stage}] </span> : null}
                         <span>{entry.line}</span>
                       </div>
                     ))}
@@ -552,7 +552,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
                 Full transcript saved to{' '}
-                <code className="rounded bg-muted/50 px-1 py-0.5 font-mono">%LOCALAPPDATA%\hermes\logs\</code>
+                <code className="rounded-lg bg-muted px-1 py-0.5 font-mono">%LOCALAPPDATA%\hermes\logs\</code>
               </span>
               <div className="flex gap-2">
                 <Button

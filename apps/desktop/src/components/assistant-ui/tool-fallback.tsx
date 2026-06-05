@@ -129,11 +129,13 @@ function statusGlyph(status: ToolStatus): ReactNode {
 function ToolGlyph({ icon, status }: { icon?: string; status?: ToolStatus }) {
   const node = status ? (
     statusGlyph(status)
-  ) : icon ? (
-    <Codicon className="text-(--ui-text-tertiary)" name={icon} size="0.875rem" />
-  ) : null
+  ) : (
+    // Every tool header gets a leading icon — fall back to a generic glyph
+    // when the tool isn't in the icon map (e.g. MCP tools like memory).
+    <Codicon className="text-(--ui-text-tertiary)" name={icon || 'symbol-method'} size="0.875rem" />
+  )
 
-  return node ? <span className={TOOL_HEADER_GLYPH_WRAP_CLASS}>{node}</span> : null
+  return <span className={TOOL_HEADER_GLYPH_WRAP_CLASS}>{node}</span>
 }
 
 // Which status (if any) should pre-empt the tool's icon in the leading
@@ -281,7 +283,7 @@ function ToolEntry({ part }: ToolEntryProps) {
     <div
       className={cn(
         'min-w-0 max-w-full overflow-hidden text-[length:var(--conversation-tool-font-size)] text-(--ui-text-tertiary)',
-        open && 'rounded-[0.625rem] border border-(--ui-stroke-tertiary)'
+        open && 'rounded-lg border border-(--ui-stroke-tertiary)'
       )}
       data-slot="tool-block"
       ref={enterRef}
@@ -297,7 +299,7 @@ function ToolEntry({ part }: ToolEntryProps) {
             <FadeText
               className={cn(
                 TOOL_HEADER_TITLE_CLASS,
-                isPending && 'shimmer text-(--ui-text-tertiary)',
+                isPending && 'text-(--ui-text-tertiary)',
                 view.status === 'error' && 'text-destructive',
                 view.status === 'warning' && 'text-amber-700 dark:text-amber-300'
               )}
@@ -318,7 +320,7 @@ function ToolEntry({ part }: ToolEntryProps) {
             <PreviewAttachment source="tool-result" target={view.previewTarget} />
           )}
           {view.imageUrl && (
-            <div className="max-w-72 overflow-hidden rounded-[0.25rem] border border-(--ui-stroke-tertiary)">
+            <div className="max-w-72 overflow-hidden rounded-lg border border-(--ui-stroke-tertiary)">
               <ZoomableImage alt="Tool output" className="h-auto w-full object-cover" src={view.imageUrl} />
             </div>
           )}
@@ -339,7 +341,7 @@ function ToolEntry({ part }: ToolEntryProps) {
                   {detailSections.body && (
                     <pre
                       className={cn(
-                        'max-h-56 overflow-auto whitespace-pre-wrap wrap-anywhere font-mono text-[0.7rem] leading-[1.55] text-destructive/90',
+                        'max-h-56 overflow-auto whitespace-pre-wrap wrap-anywhere font-mono text-[0.7rem] leading-[1.55] text-destructive',
                         detailSections.summary && 'mt-1.5'
                       )}
                     >
@@ -529,7 +531,7 @@ export const ToolGroupSlot: FC<PropsWithChildren<{ endIndex: number; startIndex:
               <FadeText
                 className={cn(
                   TOOL_HEADER_SUBTITLE_CLASS,
-                  displayStatus === 'warning' ? 'text-amber-700/80 dark:text-amber-300/85' : 'text-destructive/85'
+                  displayStatus === 'warning' ? 'text-amber-700/80 dark:text-amber-300/85' : 'text-destructive'
                 )}
               >
                 {statusSummary}

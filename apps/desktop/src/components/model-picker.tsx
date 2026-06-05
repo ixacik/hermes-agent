@@ -226,7 +226,7 @@ function ModelResults({
               return (
                 <CommandItem
                   className={cn(
-                    'flex items-center gap-2 pl-6 font-mono',
+                    'flex items-center gap-2 rounded-lg pl-6 font-mono',
                     isCurrent &&
                       'bg-primary text-primary-foreground data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground',
                     locked && 'cursor-not-allowed opacity-45'
@@ -270,7 +270,7 @@ function ModelPrice({ price, isCurrent }: { price?: ModelPricing; isCurrent: boo
       <span
         className={cn(
           'shrink-0 rounded-sm px-1 py-0.5 text-[0.62rem] font-semibold uppercase tracking-wide',
-          isCurrent ? 'bg-primary-foreground/20' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+          isCurrent ? 'bg-(--ui-bg-elevated)' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
         )}
       >
         Free
@@ -282,7 +282,7 @@ function ModelPrice({ price, isCurrent }: { price?: ModelPricing; isCurrent: boo
     <span
       className={cn(
         'shrink-0 text-[0.66rem] tabular-nums',
-        isCurrent ? 'text-primary-foreground/80' : 'text-muted-foreground'
+        isCurrent ? 'text-primary-foreground' : 'text-muted-foreground'
       )}
       title="Input / Output price per million tokens"
     >
@@ -311,7 +311,7 @@ function ProviderHeading({ provider }: { provider: ModelOptionProvider }) {
         Free tier
       </span>
     ) : provider.free_tier === false ? (
-      <span className="rounded-sm bg-primary/15 px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-primary">
+      <span className="rounded-sm bg-(--ui-bg-selected) px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-primary">
         Pro
       </span>
     ) : null

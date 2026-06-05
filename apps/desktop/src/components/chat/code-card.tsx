@@ -12,7 +12,7 @@ function CodeCard({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       className={cn(
-        'min-w-0 max-w-full overflow-hidden rounded-[0.625rem] border border-border text-[length:var(--conversation-tool-font-size)] text-muted-foreground',
+        'min-w-0 max-w-full overflow-hidden rounded-lg border border-border text-[length:var(--conversation-tool-font-size)] text-muted-foreground',
         className
       )}
       data-slot="code-card"
@@ -35,7 +35,7 @@ function CodeCardTitle({ className, children, ...props }: React.ComponentProps<'
   return (
     <span
       className={cn(
-        'flex min-w-0 items-center gap-1.5 truncate text-[length:var(--conversation-tool-font-size)] font-medium leading-(--conversation-line-height) text-foreground/80',
+        'flex min-w-0 items-center gap-1.5 truncate text-[length:var(--conversation-tool-font-size)] font-medium leading-(--conversation-line-height) text-(--ui-text-secondary)',
         className
       )}
       data-slot="code-card-title"
@@ -66,7 +66,7 @@ function CodeCardBody({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       className={cn(
-        'p-1.5 font-mono text-[0.7rem] leading-relaxed text-foreground/90 [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent! [&_pre]:px-2 [&_pre]:py-1.5 [&_pre]:font-mono [&_pre]:leading-relaxed',
+        'p-1.5 font-mono text-[0.7rem] leading-relaxed text-(--ui-text-secondary) [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent! [&_pre]:px-2 [&_pre]:py-1.5 [&_pre]:font-mono [&_pre]:leading-relaxed',
         className
       )}
       data-slot="code-card-body"

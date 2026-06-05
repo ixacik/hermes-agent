@@ -44,7 +44,7 @@ const Checkmark: FC<{ status: TodoStatus; label: string }> = ({ status, label })
     return (
       <span
         aria-label={`In progress: ${label}`}
-        className="grid size-[1.1rem] shrink-0 place-items-center rounded-full border border-ring/65 bg-[color-mix(in_srgb,var(--dt-ring)_14%,transparent)]"
+        className="grid size-[1.1rem] shrink-0 place-items-center rounded-full border border-(--dt-ring) bg-(--ui-bg-selected)"
       >
         <Loader2Icon className="size-3 animate-spin text-ring" />
       </span>
@@ -58,10 +58,10 @@ const Checkmark: FC<{ status: TodoStatus; label: string }> = ({ status, label })
       aria-label={label}
       checked={checked}
       className={cn(
-        'size-[1.1rem] shrink-0 rounded-full border-border/80 pointer-events-none disabled:cursor-default disabled:opacity-100',
+        'size-[1.1rem] shrink-0 rounded-full border-border pointer-events-none disabled:cursor-default disabled:opacity-100',
         checked &&
           'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground [&_[data-slot=checkbox-indicator]_svg]:size-3',
-        status === 'cancelled' && 'border-muted-foreground/40'
+        status === 'cancelled' && 'border-border'
       )}
       disabled
     />
@@ -77,7 +77,7 @@ export const HoistedTodoPanel: FC<{ todos: TodoItem[] }> = ({ todos }) => {
 
   return (
     <section
-      className="mt-1 mb-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl border border-border/70 bg-card align-top shadow-[0_1px_2px_0_hsl(var(--foreground)/0.04),0_1px_4px_-1px_hsl(var(--foreground)/0.06)]"
+      className="mt-1 mb-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl border border-border bg-card align-top shadow-[0_1px_2px_0_hsl(var(--foreground)/0.04),0_1px_4px_-1px_hsl(var(--foreground)/0.06)]"
       data-slot="aui_todo-hoisted"
     >
       <header className="px-3 pt-3 pb-2">

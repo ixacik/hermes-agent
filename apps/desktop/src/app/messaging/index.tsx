@@ -517,7 +517,7 @@ function PlatformDetail({
           </header>
 
           {platform.error_message && (
-            <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-destructive">
+            <div className="flex items-start gap-2 rounded-xl border border-(--ui-border-error) bg-(--ui-bg-error) px-3 py-2 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-destructive">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span>{platform.error_message}</span>
             </div>
