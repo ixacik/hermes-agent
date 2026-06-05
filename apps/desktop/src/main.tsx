@@ -7,6 +7,7 @@ import { HashRouter } from 'react-router-dom'
 
 import App from './app'
 import { ErrorBoundary } from './components/error-boundary'
+import { I18nProvider } from './i18n'
 import { installClipboardShim } from './lib/clipboard'
 import { queryClient } from './lib/query-client'
 
@@ -25,9 +26,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary label="root">
       <QueryClientProvider client={queryClient}>
-        <HashRouter>
-          <App />
-        </HashRouter>
+        <I18nProvider>
+          <HashRouter>
+            <App />
+          </HashRouter>
+        </I18nProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>

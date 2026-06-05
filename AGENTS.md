@@ -4,6 +4,15 @@ Instructions for AI coding assistants and developers working on the hermes-agent
 
 **Never give up on the right solution.**
 
+## Branch Policy
+
+- Always work on the `main` branch only.
+- Do not create feature branches or continue work on non-`main` branches unless
+  the user explicitly asks for that specific branch operation.
+- When local or upstream work needs to be integrated, switch back to `main` and
+  merge there while preserving the existing Hermes desktop UI and local
+  improvements.
+
 ## Development Environment
 
 ```bash
