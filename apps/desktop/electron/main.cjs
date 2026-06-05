@@ -3125,6 +3125,18 @@ function installPreviewShortcut(window) {
   })
 }
 
+function installNewSessionShortcut(window) {
+  window.webContents.on('before-input-event', (event, input) => {
+    const key = String(input.key || '').toLowerCase()
+    const isNewSessionShortcut = key === 'n' && (IS_MAC ? input.meta : input.control) && !input.alt && !input.shift
+
+    if (!isNewSessionShortcut || input.isAutoRepeat) return
+
+    event.preventDefault()
+    sendMenuAction('new-session')
+  })
+}
+
 function clampZoomLevel(level) {
   if (!Number.isFinite(level)) return DEFAULT_ZOOM_LEVEL
   return Math.min(Math.max(level, ZOOM_LEVEL_MIN), ZOOM_LEVEL_MAX)
@@ -4630,6 +4642,7 @@ function createWindow() {
   mainWindow.on('leave-full-screen', () => sendWindowStateChanged(false))
 
   installPreviewShortcut(mainWindow)
+  installNewSessionShortcut(mainWindow)
   installDevToolsShortcut(mainWindow)
   installZoomShortcuts(mainWindow)
   installContextMenu(mainWindow)

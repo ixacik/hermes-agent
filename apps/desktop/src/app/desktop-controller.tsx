@@ -497,13 +497,11 @@ export function DesktopController() {
         return
       }
 
-      // Two accelerators for "new session":
-      //   - Cmd/Ctrl+N (browser-like, works while typing in any input)
-      //   - Shift+N    (single-key, only when no input is focused)
       const accelerator = event.metaKey || event.ctrlKey
-      const singleKey = !accelerator && !editing && event.shiftKey
 
-      if (!accelerator && !singleKey) {
+      // Cmd/Ctrl+N is handled in Electron's before-input-event layer so it
+      // works even while the composer intentionally owns focus.
+      if (accelerator || !event.shiftKey || editing) {
         return
       }
 
