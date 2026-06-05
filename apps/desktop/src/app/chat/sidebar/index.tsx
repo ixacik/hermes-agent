@@ -770,7 +770,7 @@ function SidebarSectionHeader({ label, open, onToggle, action, meta }: SidebarSe
         onClick={onToggle}
         type="button"
       >
-        <SidebarPanelLabel>{label}</SidebarPanelLabel>
+        <SidebarPanelLabel hideDot>{label}</SidebarPanelLabel>
         {meta && <SidebarCount>{meta}</SidebarCount>}
         <DisclosureCaret
           className="text-(--ui-text-tertiary) opacity-0 transition group-hover/section-label:opacity-100"

@@ -12,7 +12,7 @@ function CodeCard({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       className={cn(
-        'min-w-0 max-w-full overflow-hidden rounded-lg border border-border text-[length:var(--conversation-tool-font-size)] text-muted-foreground',
+        'min-w-0 max-w-full overflow-hidden rounded-lg bg-muted text-[length:var(--conversation-tool-font-size)] text-muted-foreground',
         className
       )}
       data-slot="code-card"
@@ -24,7 +24,7 @@ function CodeCard({ className, ...props }: React.ComponentProps<'div'>) {
 function CodeCardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      className={cn('flex items-center justify-between gap-2 border-b border-border px-2 py-1.5', className)}
+      className={cn('flex items-center justify-between gap-2 px-2 py-1.5', className)}
       data-slot="code-card-header"
       {...props}
     />

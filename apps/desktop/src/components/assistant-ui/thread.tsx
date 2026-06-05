@@ -704,8 +704,8 @@ const UserMessage: FC<{
 
   const bubbleClassName = cn(
     USER_BUBBLE_BASE_CLASS,
-    'border-(--ui-stroke-tertiary) pr-9 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary) transition-colors',
-    !threadRunning && 'cursor-pointer hover:border-(--ui-stroke-secondary)'
+    'border-0 pr-9 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary) transition-colors',
+    !threadRunning && 'cursor-pointer'
   )
 
   const bubbleContent = (

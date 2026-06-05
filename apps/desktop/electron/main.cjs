@@ -258,10 +258,14 @@ const BOOT_FAKE_STEP_MS = (() => {
   return Math.max(120, raw)
 })()
 const APP_NAME = 'Hermes'
-const TITLEBAR_HEIGHT = 34
+const TITLEBAR_HEIGHT = 38
 const MACOS_TRAFFIC_LIGHTS_HEIGHT = 14
+// Symmetric corner inset: the traffic lights sit the same distance from the
+// window's left edge as from its top, and their vertical center lands on the
+// titlebar's center line (shared by the in-app icons + conversation title).
+//   y = TITLEBAR_HEIGHT/2 - lights/2 = 19 - 7 = 12  →  x matches at 12.
 const WINDOW_BUTTON_POSITION = {
-  x: 24,
+  x: TITLEBAR_HEIGHT / 2 - MACOS_TRAFFIC_LIGHTS_HEIGHT / 2,
   y: TITLEBAR_HEIGHT / 2 - MACOS_TRAFFIC_LIGHTS_HEIGHT / 2
 }
 // Width Electron reserves for the Windows/Linux native min/max/close cluster

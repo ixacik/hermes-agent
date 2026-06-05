@@ -75,8 +75,8 @@ export const SyntaxHighlighter: FC<HermesSyntaxHighlighterProps> = ({
         </CodeCardTitle>
         <CopyButton
           appearance="inline"
-          className="-my-1 -mr-1 h-5 px-1 opacity-55 hover:opacity-100"
-          iconClassName="size-2.5"
+          className="-mr-1 size-5 justify-center p-0 text-foreground opacity-70 hover:opacity-100"
+          iconClassName="size-3"
           label="Copy code"
           showLabel={false}
           text={trimmed}

@@ -292,11 +292,11 @@ function ProfilePill({ active, glyph, label, onSelect }: ProfilePillProps) {
         aria-label={label}
         aria-pressed={active}
         className={cn(
-          // Selection shows in the icon (it brightens to foreground), not a
-          // persistent fill. The background box is hover-only for every pill,
-          // selected or not.
-          'bg-transparent hover:bg-(--ui-control-hover-background)',
-          active ? 'text-foreground' : 'text-(--ui-text-tertiary) hover:text-foreground'
+          // Selected pills get a persistent filled background (the active token);
+          // unselected pills are transparent with a hover-only box.
+          active
+            ? 'bg-(--ui-control-active-background) text-foreground'
+            : 'bg-transparent text-(--ui-text-tertiary) hover:bg-(--ui-control-hover-background) hover:text-foreground'
         )}
         onClick={onSelect}
         size="icon-xs"

@@ -208,8 +208,12 @@
     --radius: 0.75rem;
     --radius-scalar: 0.6;
 
-    /* Space under last message vs overlay composer — driven by the measured composer height (see composer/index.tsx). */
-    --thread-last-message-clearance: calc(var(--composer-measured-height) + 2rem);
+    /* Space under last message vs overlay composer. Based on the composer's
+       inner surface height (which is also how far the viewport extends behind
+       the composer — see --thread-viewport-height), so the visible gap above
+       the composer box ends up being just the extra term below, not the
+       composer's full outer-padded form height. */
+    --thread-last-message-clearance: calc(var(--composer-surface-measured-height) + 1rem);
 
     --composer-shell-pad-block-end: 1.25rem;
     --message-text-indent: 0.75rem;
