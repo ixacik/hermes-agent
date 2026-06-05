@@ -34,7 +34,7 @@ export function ChatDropOverlay({ kind }: { kind: DragKind }) {
       )}
       data-slot="chat-drop-overlay"
     >
-      <div className="absolute inset-2 rounded-2xl border-2 border-dashed border-(--dt-ring) bg-card-[2px]" />
+      <div className="absolute inset-2 rounded-2xl border-2 border-dashed border-(--dt-ring) bg-card" />
       <div className="relative flex items-center gap-2 rounded-full border border-(--dt-ring) bg-card px-4 py-2 text-[0.8125rem] font-medium text-foreground shadow-composer">
         <Codicon className="text-(--ui-accent)" name={icon} size="1rem" />
         {label}

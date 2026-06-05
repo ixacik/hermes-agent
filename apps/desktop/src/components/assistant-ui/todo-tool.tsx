@@ -77,7 +77,7 @@ export const HoistedTodoPanel: FC<{ todos: TodoItem[] }> = ({ todos }) => {
 
   return (
     <section
-      className="mt-1 mb-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl border border-border bg-card align-top shadow-[0_1px_2px_0_hsl(var(--foreground)/0.04),0_1px_4px_-1px_hsl(var(--foreground)/0.06)]"
+      className="mt-1 mb-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl bg-card align-top shadow-[0_1px_2px_0_hsl(var(--foreground)/0.04),0_1px_4px_-1px_hsl(var(--foreground)/0.06)]"
       data-slot="aui_todo-hoisted"
     >
       <header className="px-3 pt-3 pb-2">

@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react'
-import type { ComponentProps, ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ import {
 
 import { appViewForPath, isOverlayView } from '../routes'
 
-import { titlebarButtonClass } from './titlebar'
+import { titlebarButtonClass, titlebarControlsPosition } from './titlebar'
 
 export interface TitlebarTool {
   id: string
@@ -36,18 +36,31 @@ export interface TitlebarTool {
 export type TitlebarToolSide = 'left' | 'right'
 export type SetTitlebarToolGroup = (id: string, tools: readonly TitlebarTool[], side?: TitlebarToolSide) => void
 
-interface TitlebarControlsProps extends ComponentProps<'div'> {
+interface TitlebarControlsProps {
   leftTools?: readonly TitlebarTool[]
-  tools?: readonly TitlebarTool[]
+  nativeOverlayWidth?: number
   onOpenSettings: () => void
+  titleSlotRef?: (node: HTMLDivElement | null) => void
+  tools?: readonly TitlebarTool[]
+  windowButtonPosition?: { x: number; y: number } | null
+  windowFullscreen?: boolean
 }
 
-export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }: TitlebarControlsProps) {
+export function TitlebarControls({
+  leftTools = [],
+  nativeOverlayWidth = 0,
+  onOpenSettings,
+  titleSlotRef,
+  tools = [],
+  windowButtonPosition,
+  windowFullscreen = false
+}: TitlebarControlsProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const fileBrowserOpen = useStore($fileBrowserOpen)
   const sidebarOpen = useStore($sidebarOpen)
   const panesFlipped = useStore($panesFlipped)
+  const titlebarControls = titlebarControlsPosition(windowButtonPosition, windowFullscreen)
 
   // Each titlebar button controls the pane physically on its side, so a flip
   // swaps which pane each one toggles. Default: sessions left, file browser
@@ -116,64 +129,64 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
   const settingsTool = visibleSystemTools.find(tool => tool.id === 'settings')
   const visibleSystemToolsBeforeSettings = visibleSystemTools.filter(tool => tool.id !== 'settings')
   const visiblePaneTools = tools.filter(tool => !tool.hidden)
+  const leftEdgePaneWidth = panesFlipped ? 'var(--pane-file-browser-width)' : 'var(--pane-chat-sidebar-width)'
+
+  const leftSegmentStyle = {
+    '--titlebar-native-left-inset': `${titlebarControls.left}px`,
+    width: leftEdge.open ? leftEdgePaneWidth : undefined
+  } as CSSProperties
+
+  const rightSegmentStyle = {
+    '--titlebar-native-overlay-fallback': `${nativeOverlayWidth}px`
+  } as CSSProperties
 
   return (
-    <>
-      {/*
-        While the left-edge pane is open, the controls right-align against its
-        inner edge (`right` measured from the window's right edge back to the
-        pane boundary) so they sit opposite the traffic lights — justified
-        across the sidebar header. Anchoring by `right` keeps the cluster only
-        as wide as its buttons, so the empty span never covers the traffic
-        lights' drag region. When the pane is closed there's no sidebar to align
-        within, so the controls fall back to sitting beside the traffic lights.
-      */}
+    <div className="fixed inset-x-0 top-0 z-70 flex h-(--titlebar-height) select-none [-webkit-app-region:drag]">
       <div
         aria-label="Window controls"
-        className={cn(
-          'fixed top-(--titlebar-controls-top) z-70 flex flex-row items-center gap-x-1 pointer-events-auto select-none [-webkit-app-region:no-drag]',
-          leftEdge.open
-            ? 'right-[calc(100%-var(--titlebar-left-pane-width)+0.5rem)]'
-            : 'left-(--titlebar-controls-left)'
-        )}
+        className="flex h-full shrink-0 items-center"
+        style={leftSegmentStyle}
       >
-        {leftToolbarTools
-          .filter(tool => !tool.hidden)
-          .map(tool => (
-            <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
-          ))}
-      </div>
-
-      {/*
-        Pane-scoped tools (preview's monitor / devtools / refresh / X) render
-        as their own fixed cluster. AppShell sets --shell-preview-toolbar-gap
-        to either the static cluster's width (file-browser closed → cluster
-        sits flush against system tools) or the file-browser pane's width
-        (file-browser open → cluster sits flush against the file-browser pane,
-        i.e. at the preview pane's right edge). No margin hacks needed.
-      */}
-      {visiblePaneTools.length > 0 && (
-        <div
-          aria-label="Pane controls"
-          className="fixed top-(--titlebar-controls-top) right-[calc(var(--titlebar-tools-right)+var(--shell-preview-toolbar-gap,0))] z-70 flex flex-row items-center gap-x-1 pointer-events-auto select-none [-webkit-app-region:no-drag]"
-        >
-          {visiblePaneTools.map(tool => (
-            <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
-          ))}
+        <div aria-hidden="true" className="h-full w-(--titlebar-native-left-inset) shrink-0" />
+        <div className="min-w-2 flex-1" />
+        <div className="pointer-events-auto mr-2 flex flex-row items-center gap-x-1 [-webkit-app-region:no-drag]">
+          {leftToolbarTools
+            .filter(tool => !tool.hidden)
+            .map(tool => (
+              <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
+            ))}
         </div>
-      )}
+      </div>
 
       <div
-        aria-label="App controls"
-        className="fixed right-(--titlebar-tools-right) top-(--titlebar-controls-top) z-70 flex flex-row items-center justify-end gap-x-1 pointer-events-auto select-none [-webkit-app-region:no-drag]"
+        className="flex h-full min-w-0 flex-1 items-center bg-(--ui-chat-surface-background) pl-2 pr-[max(0.5rem,var(--titlebar-native-overlay-fallback),calc(100vw-env(titlebar-area-x,100vw)-env(titlebar-area-width,0px)))]"
+        style={rightSegmentStyle}
       >
-        {visibleSystemToolsBeforeSettings.map(tool => (
-          <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
-        ))}
-        {settingsTool && <TitlebarToolButton navigate={navigate} tool={settingsTool} />}
-        <TitlebarToolButton navigate={navigate} tool={rightSidebarTool} />
+        <div className="relative flex min-w-0 flex-1 items-center" ref={titleSlotRef} />
+
+        {visiblePaneTools.length > 0 && (
+          <div
+            aria-label="Pane controls"
+            className="pointer-events-auto flex flex-row items-center gap-x-1 [-webkit-app-region:no-drag]"
+          >
+            {visiblePaneTools.map(tool => (
+              <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
+            ))}
+          </div>
+        )}
+
+        <div
+          aria-label="App controls"
+          className="pointer-events-auto ml-1 flex flex-row items-center justify-end gap-x-1 [-webkit-app-region:no-drag]"
+        >
+          {visibleSystemToolsBeforeSettings.map(tool => (
+            <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
+          ))}
+          {settingsTool && <TitlebarToolButton navigate={navigate} tool={settingsTool} />}
+          <TitlebarToolButton navigate={navigate} tool={rightSidebarTool} />
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 

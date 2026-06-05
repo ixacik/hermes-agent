@@ -649,7 +649,7 @@ function StickyHumanMessageContainer({ children }: { children: ReactNode }) {
   // old `position: sticky` pin caused per-scroll repaint jank.
   return (
     <div
-      className="group/user-message -mx-4 flex w-[calc(100%+2rem)] min-w-0 max-w-none flex-col items-stretch gap-0 self-end overflow-visible bg-(--ui-chat-surface-background) px-4 pb-(--conversation-turn-gap) pt-2"
+      className="group/user-message -mx-4 flex w-[calc(100%+2rem)] min-w-0 max-w-none flex-col items-end gap-0 self-end overflow-visible bg-(--ui-chat-surface-background) px-4 pb-(--conversation-turn-gap) pt-2"
       data-role="user"
       data-slot="aui_user-message-root"
     >
@@ -663,7 +663,7 @@ function StickyHumanMessageContainer({ children }: { children: ReactNode }) {
 // shadow-composer); they only differ in border weight, cursor, and
 // padding-right (the read-only view reserves room for the restore icon).
 const USER_BUBBLE_BASE_CLASS =
-  'composer-human-message standalone-glass relative flex w-full min-w-0 max-w-full flex-col gap-1.5 overflow-hidden rounded-xl border bg-(--dt-user-bubble) px-3 py-2 text-left shadow-composer'
+  'composer-human-message standalone-glass relative flex w-fit min-w-0 max-w-full flex-col gap-1.5 overflow-hidden rounded-xl border bg-(--dt-user-bubble) px-3 py-2 text-left shadow-composer'
 
 const USER_ACTION_ICON_BUTTON_CLASS =
   'grid place-items-center rounded-md bg-transparent text-(--ui-text-secondary) transition-colors hover:bg-(--ui-control-active-background) hover:text-foreground disabled:cursor-default disabled:text-(--ui-text-quaternary) disabled:opacity-70'
@@ -704,7 +704,7 @@ const UserMessage: FC<{
 
   const bubbleClassName = cn(
     USER_BUBBLE_BASE_CLASS,
-    'border-0 pr-9 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary) transition-colors',
+    'border-0 text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary) transition-colors',
     !threadRunning && 'cursor-pointer'
   )
 
@@ -727,9 +727,9 @@ const UserMessage: FC<{
   return (
     <MessagePrimitive.Root asChild>
       <StickyHumanMessageContainer>
-        <ActionBarPrimitive.Root className="relative w-full max-w-full" data-slot="aui_user-bubble-actions">
-          <div className="human-message-with-todos-wrapper flex w-full flex-col gap-0">
-            <div className="relative w-full">
+        <ActionBarPrimitive.Root className="relative w-fit max-w-[80%]" data-slot="aui_user-bubble-actions">
+          <div className="human-message-with-todos-wrapper flex w-fit max-w-full flex-col gap-0">
+            <div className="relative w-fit max-w-full">
               {threadRunning ? (
                 <div className={bubbleClassName}>{bubbleContent}</div>
               ) : (

@@ -197,31 +197,6 @@ export function DesktopController() {
     }
   }, [])
 
-  // Items that used to live in the bottom status bar are now reachable from the
-  // native application menu (Go ▸ …). The main process forwards each click here.
-  useEffect(() => {
-    const unsubscribe = window.hermesDesktop?.onMenuAction?.(action => {
-      switch (action) {
-        case 'command-center':
-          toggleCommandCenter()
-
-          break
-
-        case 'agents':
-          openAgents()
-
-          break
-
-        case 'cron':
-          navigate(CRON_ROUTE)
-
-          break
-      }
-    })
-
-    return () => unsubscribe?.()
-  }, [navigate, openAgents, toggleCommandCenter])
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!$filePreviewTarget.get() && !$previewTarget.get()) {
@@ -476,6 +451,37 @@ export function DesktopController() {
     syncSessionStateToView,
     updateSessionState
   })
+
+  // Items that used to live in the bottom status bar are now reachable from the
+  // native application menu. The main process forwards each click here.
+  useEffect(() => {
+    const unsubscribe = window.hermesDesktop?.onMenuAction?.(action => {
+      switch (action) {
+        case 'new-session':
+          startFreshSessionDraft()
+          window.dispatchEvent(new CustomEvent('hermes:new-session-shortcut'))
+
+          break
+
+        case 'command-center':
+          toggleCommandCenter()
+
+          break
+
+        case 'agents':
+          openAgents()
+
+          break
+
+        case 'cron':
+          navigate(CRON_ROUTE)
+
+          break
+      }
+    })
+
+    return () => unsubscribe?.()
+  }, [navigate, openAgents, startFreshSessionDraft, toggleCommandCenter])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

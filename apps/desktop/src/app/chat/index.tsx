@@ -42,7 +42,7 @@ import {
 import type { ModelOptionsResponse } from '@/types/hermes'
 
 import { routeSessionId } from '../routes'
-import { titlebarHeaderBaseClass, titlebarHeaderShadowClass } from '../shell/titlebar'
+import { TitlebarSlot } from '../shell/titlebar-slot'
 
 import { ChatDropOverlay } from './chat-drop-overlay'
 import { ChatSwapOverlay } from './chat-swap-overlay'
@@ -122,7 +122,7 @@ function ChatHeader({
   }
 
   return (
-    <header className={cn(titlebarHeaderBaseClass, isRoutedSessionView && titlebarHeaderShadowClass)}>
+    <TitlebarSlot>
       <div className="min-w-0 flex-1">
         <SessionActionsMenu
           align="start"
@@ -143,7 +143,13 @@ function ChatHeader({
           </Button>
         </SessionActionsMenu>
       </div>
-    </header>
+      {isRoutedSessionView && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 right-0 top-full h-4 bg-linear-to-b from-(--ui-chat-surface-background) to-transparent"
+        />
+      )}
+    </TitlebarSlot>
   )
 }
 

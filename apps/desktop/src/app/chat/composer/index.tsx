@@ -33,6 +33,7 @@ import {
 import { $gatewayState, $messages } from '@/store/session'
 import { $threadScrolledUp } from '@/store/thread-scroll'
 
+import { appViewForPath } from '../../routes'
 import { extractDroppedFiles, HERMES_PATHS_MIME } from '../hooks/use-composer-actions'
 
 import { AttachmentList } from './attachments'
@@ -279,6 +280,116 @@ export function ChatBar({
       offInsert()
     }
   }, [appendExternalText, disabled])
+
+  // TUI-style "always listening" composer: whenever the app is focused and the
+  // chat is the active surface, the main composer holds keyboard focus — type
+  // anywhere routes here, clicking empty space keeps it focused, and regaining
+  // app focus re-focuses it. We bow out for overlays (settings, command
+  // palette, dialogs, menus), other inputs (search, terminal, the inline edit
+  // composer), and an active text selection, so you can still select/copy.
+  useEffect(() => {
+    const editor = editorRef.current
+
+    if (typeof window === 'undefined' || !editor) {
+      return undefined
+    }
+
+    const isEditableElsewhere = (el: Element | null) =>
+      el instanceof HTMLElement &&
+      el !== editor &&
+      (el.isContentEditable ||
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.tagName === 'SELECT' ||
+        el.getAttribute('role') === 'textbox')
+
+    const overlayOpen = () =>
+      Boolean(
+        document.querySelector(
+          '[role="dialog"],[data-slot="dropdown-menu-content"],[data-slot="select-content"],[data-slot="context-menu-content"]'
+        )
+      )
+
+    const hasTextSelection = () => {
+      const sel = window.getSelection()
+
+      return Boolean(sel && !sel.isCollapsed && sel.toString().length > 0)
+    }
+
+    const canGrab = () => {
+      if (disabled || !document.hasFocus()) {
+        return false
+      }
+
+      // Full-screen overlay route (settings/agents/cron/…) owns the keyboard.
+      const routePath = window.location.hash.replace(/^#/, '').split('?')[0] || '/'
+
+      if (appViewForPath(routePath) !== 'chat') {
+        return false
+      }
+
+      return !overlayOpen() && !isEditableElsewhere(document.activeElement) && !hasTextSelection()
+    }
+
+    const grab = () => {
+      if (document.activeElement === editor || !canGrab()) {
+        return
+      }
+
+      focusInput()
+    }
+
+    const grabSoon = () => window.setTimeout(grab, 0)
+
+    let pointerDown = false
+
+    const onPointerDown = () => {
+      pointerDown = true
+    }
+
+    const onPointerUp = () => {
+      pointerDown = false
+      grabSoon()
+    }
+
+    const onWindowFocus = () => grabSoon()
+
+    const onFocusOut = () => {
+      if (!pointerDown) {
+        grabSoon()
+      }
+    }
+
+    // Type-anywhere: a printable key (no modifiers) while focus is loose pulls
+    // it into the composer synchronously, so the keystroke itself lands here.
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) {
+        return
+      }
+
+      if (document.activeElement === editor || isEditableElsewhere(document.activeElement) || !canGrab()) {
+        return
+      }
+
+      focusInput()
+    }
+
+    window.addEventListener('focus', onWindowFocus)
+    document.addEventListener('focusout', onFocusOut)
+    window.addEventListener('pointerdown', onPointerDown, true)
+    window.addEventListener('pointerup', onPointerUp, true)
+    window.addEventListener('keydown', onKeyDown)
+
+    grab()
+
+    return () => {
+      window.removeEventListener('focus', onWindowFocus)
+      document.removeEventListener('focusout', onFocusOut)
+      window.removeEventListener('pointerdown', onPointerDown, true)
+      window.removeEventListener('pointerup', onPointerUp, true)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [disabled, focusInput])
 
   // Keep draftRef in sync with the assistant-ui composer state for callers
   // that read the latest text outside the React render cycle. We don't push
@@ -667,6 +778,19 @@ export function ChatBar({
 
         return
       }
+    }
+
+    // With no primary button in this fork, Escape is the sole abort affordance
+    // for a running turn (the trigger popover, handled above, takes Escape
+    // first when open). Mirrors the old Stop path: mark the interrupt so the
+    // busy→false auto-drain effect leaves queued follow-ups untouched.
+    if (event.key === 'Escape' && busy) {
+      event.preventDefault()
+      userInterruptedRef.current = true
+      triggerHaptic('cancel')
+      void Promise.resolve(onCancel())
+
+      return
     }
 
     if (event.key === 'Enter' && !event.shiftKey) {

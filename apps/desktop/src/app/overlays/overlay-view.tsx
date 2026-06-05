@@ -48,7 +48,7 @@ export function OverlayView({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 p-3-[0.125rem] sm:p-6"
+      className="fixed inset-0 z-50 bg-black/70 p-3 sm:p-6"
       onClick={event => {
         if (event.target === event.currentTarget) {
           closeOverlay()

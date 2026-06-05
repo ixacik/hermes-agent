@@ -213,7 +213,7 @@
        the composer — see --thread-viewport-height), so the visible gap above
        the composer box ends up being just the extra term below, not the
        composer's full outer-padded form height. */
-    --thread-last-message-clearance: calc(var(--composer-surface-measured-height) + 1rem);
+    --thread-last-message-clearance: calc(var(--composer-surface-measured-height) + 4rem);
 
     --composer-shell-pad-block-end: 1.25rem;
     --message-text-indent: 0.75rem;

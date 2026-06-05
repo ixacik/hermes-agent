@@ -11,7 +11,7 @@ import type { HermesGateway } from '@/hermes'
 import { triggerHaptic } from '@/lib/haptics'
 import { ChevronDown, Zap, ZapFilled } from '@/lib/icons'
 import { formatModelStatusLabel } from '@/lib/model-status-label'
-import { contextBarLabel, usageContextLabel } from '@/lib/statusbar'
+import { usageContextLabel } from '@/lib/statusbar'
 import { cn } from '@/lib/utils'
 import { setSessionYolo } from '@/lib/yolo-session'
 import {
@@ -67,12 +67,54 @@ function ContextMeter() {
     return null
   }
 
-  const bar = contextBarLabel(usage)
+  // Fraction of the context window consumed. With a known max we use the
+  // reported percent (falling back to used/max); without one we can't draw a
+  // meaningful fill, so the ring stays empty and the tooltip shows raw tokens.
+  const fraction = usage.context_max
+    ? Math.max(0, Math.min(1, (usage.context_percent ?? (usage.context_used ?? 0) / usage.context_max * 100) / 100))
+    : 0
 
   return (
-    <Tip label={bar ? `Context usage ${bar}` : 'Context usage'}>
-      <span className="hidden truncate px-1 text-xs text-(--ui-text-tertiary) sm:inline">{label}</span>
+    <Tip label={`Context usage · ${label}`}>
+      <span className="inline-flex h-(--composer-control-size) shrink-0 items-center px-1">
+        <ContextRing fraction={fraction} />
+      </span>
     </Tip>
+  )
+}
+
+// Circular gauge that fills clockwise with the inline-code blue as the context
+// window fills. Raw token counts are surfaced via the surrounding tooltip on
+// hover only — the ring itself stays numberless.
+function ContextRing({ fraction }: { fraction: number }) {
+  const size = 17
+  const stroke = 2.5
+  const r = (size - stroke) / 2
+  const circumference = 2 * Math.PI * r
+  const dash = circumference * fraction
+
+  return (
+    <svg aria-hidden className="-rotate-90" height={size} viewBox={`0 0 ${size} ${size}`} width={size}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        fill="none"
+        r={r}
+        stroke="var(--dt-border)"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        fill="none"
+        r={r}
+        stroke="var(--ui-inline-code-foreground)"
+        strokeDasharray={`${dash} ${circumference}`}
+        strokeLinecap="round"
+        strokeWidth={stroke}
+        style={{ transition: 'stroke-dasharray 0.3s ease' }}
+      />
+    </svg>
   )
 }
 

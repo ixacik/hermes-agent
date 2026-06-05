@@ -268,14 +268,6 @@ const WINDOW_BUTTON_POSITION = {
   x: TITLEBAR_HEIGHT / 2 - MACOS_TRAFFIC_LIGHTS_HEIGHT / 2,
   y: TITLEBAR_HEIGHT / 2 - MACOS_TRAFFIC_LIGHTS_HEIGHT / 2
 }
-// Width Electron reserves for the Windows/Linux native min/max/close cluster
-// when `titleBarOverlay` is enabled. The OS paints these buttons in the
-// top-right corner of the renderer; we have to leave that much room on the
-// right edge so our system tools (file browser, haptics, settings) don't sit
-// underneath them. macOS uses left-side traffic lights instead and reports a
-// position via getWindowButtonPosition(), so this width is non-zero only on
-// non-macOS platforms.
-const NATIVE_OVERLAY_BUTTON_WIDTH = 144
 const APP_ICON_PATHS = [
   path.join(APP_ROOT, 'public', 'apple-touch-icon.png'),
   path.join(APP_ROOT, 'dist', 'apple-touch-icon.png'),
@@ -2761,11 +2753,10 @@ function getWindowButtonPosition() {
 }
 
 function getNativeOverlayWidth() {
-  // macOS reports traffic-light coords via windowButtonPosition; the
-  // titlebarOverlay there doesn't reserve right-edge space. Windows/Linux
-  // render the native window-controls overlay on the right, so the renderer
-  // needs to inset its right cluster by this much to clear them.
-  return IS_MAC ? 0 : NATIVE_OVERLAY_BUTTON_WIDTH
+  // The renderer reads Electron's titlebar-area CSS env vars for the native
+  // Windows/Linux overlay. Keep this field as a backwards-compatible fallback
+  // for older preload/renderer pairs.
+  return 0
 }
 
 function getWindowState() {
@@ -2878,6 +2869,12 @@ function buildApplicationMenu() {
   template.push({
     label: 'File',
     submenu: [
+      {
+        accelerator: 'CommandOrControl+N',
+        click: () => sendMenuAction('new-session'),
+        label: 'New Session'
+      },
+      { type: 'separator' },
       IS_MAC
         ? {
             accelerator: 'CommandOrControl+W',
