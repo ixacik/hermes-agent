@@ -764,7 +764,7 @@ interface SidebarSectionHeaderProps {
 
 function SidebarSectionHeader({ label, open, onToggle, action, meta }: SidebarSectionHeaderProps) {
   return (
-    <div className="group/section flex shrink-0 items-center justify-between pb-1 pt-1.5">
+    <div className="group/section flex shrink-0 items-center justify-between pb-1 pl-2 pt-1.5">
       <button
         className="group/section-label flex w-fit items-center gap-1 bg-transparent text-left leading-none"
         onClick={onToggle}

@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { Tip } from '@/components/ui/tooltip'
 import { triggerHaptic } from '@/lib/haptics'
-import { Layers3, Loader2, Square } from '@/lib/icons'
+import { Loader2, Square } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 import type { ConversationStatus } from './hooks/use-voice-conversation'
@@ -12,15 +12,6 @@ export const ICON_BTN = 'size-(--composer-control-size) shrink-0 rounded-md'
 export const GHOST_ICON_BTN = cn(
   ICON_BTN,
   'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
-)
-// Send/voice-conversation primary: solid foreground-on-background circle
-// (reads as black-on-white in light mode, white-on-black in dark mode) to
-// match the reference composer's high-contrast CTA. Keeps the pill itself
-// neutral and lets the action visually dominate the row.
-export const PRIMARY_ICON_BTN = cn(
-  'size-(--composer-control-primary-size,var(--composer-control-size)) shrink-0 rounded-full p-0',
-  'bg-foreground text-background hover:bg-(--ui-bg-selected)',
-  'disabled:bg-(--ui-bg-selected) disabled:text-background disabled:opacity-100'
 )
 
 interface ConversationProps {
@@ -35,18 +26,12 @@ interface ConversationProps {
 }
 
 export function ComposerControls({
-  busy,
-  busyAction,
-  canSubmit,
   conversation,
   disabled,
   state,
   voiceStatus,
   onDictate
 }: {
-  busy: boolean
-  busyAction: 'queue' | 'stop'
-  canSubmit: boolean
   conversation: ConversationProps
   disabled: boolean
   state: ChatBarState
@@ -57,33 +42,12 @@ export function ComposerControls({
     return <ConversationPill {...conversation} disabled={disabled} />
   }
 
-  // Only surface the primary action when there's something to do: a payload to
-  // send, or a running turn to stop/queue against. An empty, idle composer
-  // shows no circle at all (a disabled CTA reads as broken).
-  const showPrimary = canSubmit && !disabled
-
+  // No send/stop/queue button — this fork submits via Enter only, and the
+  // composer never shows a primary circle. The dictation mic is the sole
+  // trailing control.
   return (
     <div className="ml-auto flex shrink-0 items-center gap-(--composer-control-gap)">
       <DictationButton disabled={disabled} onToggle={onDictate} state={state.voice} status={voiceStatus} />
-      {showPrimary && (
-        <Tip label={busy ? (busyAction === 'queue' ? 'Queue message' : 'Stop') : 'Send'}>
-          <Button
-            aria-label={busy ? (busyAction === 'queue' ? 'Queue message' : 'Stop') : 'Send'}
-            className={PRIMARY_ICON_BTN}
-            type="submit"
-          >
-            {busy ? (
-              busyAction === 'queue' ? (
-                <Layers3 size={16} />
-              ) : (
-                <span className="block size-3 rounded-lg bg-current" />
-              )
-            ) : (
-              <Codicon name="arrow-up" size="1rem" />
-            )}
-          </Button>
-        </Tip>
-      )}
     </div>
   )
 }

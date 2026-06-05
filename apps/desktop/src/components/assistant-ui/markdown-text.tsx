@@ -276,6 +276,14 @@ const HEADING_SIZES: Record<'h1' | 'h2' | 'h3' | 'h4', string> = {
 const MARKDOWN_CONTAINER_CLASS_NAME = cn(
   'aui-md prose w-full max-w-none overflow-hidden text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground',
   'prose-p:leading-(--dt-line-height) prose-li:leading-(--dt-line-height)',
+  // The model is trained to put a blank line between a lead-in line ("Title:")
+  // and the list under it, which renders as a paragraph + list with full block
+  // margins between them — visually detaching the list from its title. Collapse
+  // that gap so a list sits directly beneath its lead-in line.
+  '[&_p:has(+ul)]:mb-0 [&_p:has(+ol)]:mb-0 [&_p+ul]:mt-0 [&_p+ol]:mt-0',
+  // Loose lists also wrap each <li>'s text in a <p>; zero those in-item margins
+  // and tighten item spacing so loose lists render as compactly as tight ones.
+  'prose-li:my-0.5 [&_li>p]:my-0 prose-ul:my-1 prose-ol:my-1',
   'prose-headings:text-foreground prose-strong:text-foreground',
   'prose-a:break-words prose-p:[overflow-wrap:anywhere]',
   'prose-li:marker:text-muted-foreground',

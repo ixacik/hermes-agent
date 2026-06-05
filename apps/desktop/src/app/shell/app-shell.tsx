@@ -9,6 +9,7 @@ import {
   $fileBrowserOpen,
   $panesFlipped,
   $sidebarOpen,
+  $sidebarWidth,
   FILE_BROWSER_DEFAULT_WIDTH,
   FILE_BROWSER_PANE_ID,
   setSidebarOpen
@@ -50,6 +51,7 @@ export function AppShell({
   titlebarTools
 }: AppShellProps) {
   const sidebarOpen = useStore($sidebarOpen)
+  const sidebarWidth = useStore($sidebarWidth)
   const fileBrowserOpen = useStore($fileBrowserOpen)
   const panesFlipped = useStore($panesFlipped)
   const fileBrowserWidthOverride = useStore($paneWidthOverride(FILE_BROWSER_PANE_ID))
@@ -61,7 +63,7 @@ export function AppShell({
   // on macOS, where window controls sit on the left and are reported via
   // windowButtonPosition instead). The right tool cluster has to clear them.
   const nativeOverlayWidth = connection?.nativeOverlayWidth ?? 0
-  const titlebarToolsRight = nativeOverlayWidth > 0 ? `${nativeOverlayWidth}px` : '0.75rem'
+  const titlebarToolsRight = nativeOverlayWidth > 0 ? `${nativeOverlayWidth}px` : '0.5rem'
 
   // The inset clears the top-left titlebar buttons when nothing covers the
   // window's left edge. Default layout: the sessions sidebar sits there.
@@ -87,6 +89,11 @@ export function AppShell({
 
   const fileBrowserWidth =
     fileBrowserWidthOverride !== undefined ? `${fileBrowserWidthOverride}px` : FILE_BROWSER_DEFAULT_WIDTH
+
+  // Width of whichever pane currently occupies the window's left edge. The
+  // left titlebar controls (sidebar toggle + flip) right-align against this
+  // pane's inner edge, so they sit opposite the traffic lights.
+  const leftEdgePaneWidth = panesFlipped ? fileBrowserWidth : `${sidebarWidth}px`
 
   // Where the pane-tool cluster's right edge sits, measured from the inner
   // titlebar padding (--titlebar-tools-right). Two anchors:
@@ -119,6 +126,7 @@ export function AppShell({
           '--titlebar-content-inset': `${titlebarContentInset}px`,
           '--titlebar-controls-left': `${titlebarControls.left}px`,
           '--titlebar-controls-top': `${titlebarControls.top}px`,
+          '--titlebar-left-pane-width': leftEdgePaneWidth,
           '--titlebar-tools-right': titlebarToolsRight,
           '--titlebar-tools-width': titlebarToolsWidth,
           // Anchor for the pane-tool cluster's right edge in TitlebarControls.

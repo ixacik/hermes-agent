@@ -113,7 +113,9 @@ export function SidebarSessionRow({
         {...rest}
       >
         <button
-          className="z-0 flex min-w-0 items-center gap-1.5 bg-transparent py-0.5 pl-2 pr-1 text-left"
+          // pl-2 puts the title on the shared left gutter (+0.5rem) — the same
+          // column as the nav icons, search/pin icons, and section-header text.
+          className="z-0 flex min-w-0 items-center bg-transparent py-0.5 pl-2 pr-1 text-left"
           onClick={event => {
             if (event.shiftKey) {
               event.preventDefault()
@@ -137,31 +139,13 @@ export function SidebarSessionRow({
           }}
           type="button"
         >
-          {reorderable && (
-            <span
-              {...dragHandleProps}
-              aria-label={handleLabel}
-              className="group/handle relative -my-0.5 grid w-3.5 shrink-0 cursor-grab touch-none place-items-center self-stretch active:cursor-grabbing"
-              data-reorder-handle
-              onClick={event => event.stopPropagation()}
-            >
-              <Codicon
-                className={cn(
-                  'text-(--ui-text-quaternary) opacity-0 transition-opacity group-hover/handle:opacity-80 group-focus-within/handle:opacity-80 hover:text-(--ui-text-secondary)',
-                  dragging && 'text-(--ui-text-secondary) opacity-100'
-                )}
-                name="grabber"
-                size="0.75rem"
-              />
-            </span>
-          )}
           <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-normal text-(--ui-text-secondary) group-hover:text-foreground group-data-[working=true]:text-(--ui-text-secondary)">
             {title}
           </span>
         </button>
-        <div className="relative flex w-12 items-center justify-end pr-2">
-          {/* Active → status light; idle → muted timestamp. Hidden on hover so
-              the actions menu takes the slot. */}
+        <div className="relative flex w-14 shrink-0 items-center justify-end pr-2">
+          {/* Idle → muted relative timestamp; active → status light. Hidden on
+              hover so the reorder handle + actions menu take the slot. */}
           <span className="pointer-events-none flex items-center transition-opacity group-hover:opacity-0">
             {isActive ? (
               <SidebarRowDot isWorking={isWorking} needsInput={needsInput} />
@@ -169,25 +153,42 @@ export function SidebarSessionRow({
               <span className="text-[0.625rem] leading-none tabular-nums text-(--ui-text-tertiary)">{age}</span>
             )}
           </span>
-          <SessionActionsMenu
-            onArchive={onArchive}
-            onDelete={onDelete}
-            onPin={onPin}
-            pinned={isPinned}
-            profile={session.profile}
-            sessionId={session.id}
-            title={title}
-          >
-            <Button
-              aria-label={`Actions for ${title}`}
-              className="absolute right-1 top-1/2 size-5 -translate-y-1/2 rounded-lg bg-transparent text-(--ui-text-tertiary) opacity-0 transition-[color,background-color,opacity] duration-100 hover:bg-(--ui-control-active-background) hover:text-foreground focus-visible:bg-(--ui-control-active-background) focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-0 group-hover:opacity-100 data-[state=open]:bg-(--ui-control-active-background) data-[state=open]:text-foreground data-[state=open]:opacity-100 [&_svg]:size-3.5!"
-              size="icon"
-              title="Session actions"
-              variant="ghost"
+          {/* Hover cluster (right): reorder grabber + actions menu. */}
+          <span className="absolute inset-y-0 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
+            {reorderable && (
+              <span
+                {...dragHandleProps}
+                aria-label={handleLabel}
+                className={cn(
+                  'grid size-5 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-(--ui-text-quaternary) transition-colors hover:bg-(--ui-control-active-background) hover:text-(--ui-text-secondary) active:cursor-grabbing',
+                  dragging && 'text-(--ui-text-secondary)'
+                )}
+                data-reorder-handle
+                onClick={event => event.stopPropagation()}
+              >
+                <Codicon name="grabber" size="0.75rem" />
+              </span>
+            )}
+            <SessionActionsMenu
+              onArchive={onArchive}
+              onDelete={onDelete}
+              onPin={onPin}
+              pinned={isPinned}
+              profile={session.profile}
+              sessionId={session.id}
+              title={title}
             >
-              <Codicon name="ellipsis" size="0.875rem" />
-            </Button>
-          </SessionActionsMenu>
+              <Button
+                aria-label={`Actions for ${title}`}
+                className="size-5 rounded-lg bg-transparent text-(--ui-text-tertiary) transition-colors duration-100 hover:bg-(--ui-control-active-background) hover:text-foreground focus-visible:bg-(--ui-control-active-background) focus-visible:text-foreground focus-visible:ring-0 data-[state=open]:bg-(--ui-control-active-background) data-[state=open]:text-foreground [&_svg]:size-3.5!"
+                size="icon"
+                title="Session actions"
+                variant="ghost"
+              >
+                <Codicon name="ellipsis" size="0.875rem" />
+              </Button>
+            </SessionActionsMenu>
+          </span>
         </div>
       </div>
     </SessionContextMenu>

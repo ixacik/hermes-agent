@@ -173,9 +173,7 @@ export function ChatBar({
   const slash = useSlashCompletions({ gateway: gateway ?? null })
 
   const hasComposerPayload = draft.trim().length > 0 || attachments.length > 0
-  const canSubmit = busy || hasComposerPayload
   const editingQueuedPrompt = queueEdit ? (queuedPrompts.find(entry => entry.id === queueEdit.entryId) ?? null) : null
-  const busyAction = busy && hasComposerPayload ? 'queue' : 'stop'
   const showHelpHint = draft === '?'
 
   const gatewayState = useStore($gatewayState)
@@ -1123,9 +1121,6 @@ export function ChatBar({
 
   const controls = (
     <ComposerControls
-      busy={busy}
-      busyAction={busyAction}
-      canSubmit={canSubmit}
       conversation={{
         active: voiceConversationActive,
         level: conversation.level,

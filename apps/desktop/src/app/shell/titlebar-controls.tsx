@@ -119,9 +119,23 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
 
   return (
     <>
+      {/*
+        While the left-edge pane is open, the controls right-align against its
+        inner edge (`right` measured from the window's right edge back to the
+        pane boundary) so they sit opposite the traffic lights — justified
+        across the sidebar header. Anchoring by `right` keeps the cluster only
+        as wide as its buttons, so the empty span never covers the traffic
+        lights' drag region. When the pane is closed there's no sidebar to align
+        within, so the controls fall back to sitting beside the traffic lights.
+      */}
       <div
         aria-label="Window controls"
-        className="fixed left-(--titlebar-controls-left) top-(--titlebar-controls-top) z-70 flex translate-y-0.5 flex-row items-center gap-x-1 pointer-events-auto select-none [-webkit-app-region:no-drag]"
+        className={cn(
+          'fixed top-(--titlebar-controls-top) z-70 flex flex-row items-center gap-x-1 pointer-events-auto select-none [-webkit-app-region:no-drag]',
+          leftEdge.open
+            ? 'right-[calc(100%-var(--titlebar-left-pane-width)+0.5rem)]'
+            : 'left-(--titlebar-controls-left)'
+        )}
       >
         {leftToolbarTools
           .filter(tool => !tool.hidden)
