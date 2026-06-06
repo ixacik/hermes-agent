@@ -11,6 +11,7 @@ import {
 } from '@/lib/chat-messages'
 import { normalizePersonalityValue } from '@/lib/chat-runtime'
 import { embeddedImageUrls, textWithoutEmbeddedImages } from '@/lib/embedded-images'
+import { clearLiveSessionState, type PersistedLiveSession, restoreLiveSessionState } from '@/lib/live-session-cache'
 import { hydrateInflightMessages } from '@/lib/live-turn-replay'
 import { setSessionYolo } from '@/lib/yolo-session'
 import { clearComposerAttachments, clearComposerDraft } from '@/store/composer'
@@ -24,6 +25,7 @@ import {
   $messages,
   $sessions,
   $yoloActive,
+  adjustSessionTotals,
   getRememberedWorkspaceCwd,
   sessionPinId,
   setActiveSessionId,
@@ -44,7 +46,6 @@ import {
   setSelectedStoredSessionId,
   setSessions,
   setSessionStartedAt,
-  setSessionsTotal,
   setTurnStartedAt,
   setYoloActive
 } from '@/store/session'
@@ -284,6 +285,20 @@ const LIVE_SESSION_STATUSES = new Set(['interrupt_requested', 'starting', 'waiti
 
 function isLiveSessionResponse(resumed: SessionResumeResponse): boolean {
   return Boolean(resumed.running ?? resumed.info?.running) || LIVE_SESSION_STATUSES.has(String(resumed.status || resumed.info?.status || ''))
+}
+
+function cachedTurnMatchesInflight(cache: null | PersistedLiveSession, inflight: SessionResumeResponse['inflight']): cache is PersistedLiveSession {
+  if (!cache?.busy) {
+    return false
+  }
+
+  const userText = String(inflight?.user || '').trim()
+
+  if (!userText) {
+    return true
+  }
+
+  return cache.messages.some(message => message.role === 'user' && !message.hidden && chatMessageText(message).trim() === userText)
 }
 
 export function useSessionActions({
@@ -589,18 +604,24 @@ export function useSessionActions({
               : resumedMessages
 
         const liveRunning = isLiveSessionResponse(resumed)
+        const serverInflight = resumed.inflight ?? resumed.info?.inflight
+        const cachedLive = liveRunning ? restoreLiveSessionState(resumed.session_id, storedSessionId) : null
+        const matchingCachedLive = cachedTurnMatchesInflight(cachedLive, serverInflight) ? cachedLive : null
         const hydratedInflight = hydrateInflightMessages(
           preferredMessages,
           resumed.session_id,
-          resumed.inflight ?? resumed.info?.inflight
+          serverInflight
         )
-        const messagesForView = preserveLocalAssistantErrors(hydratedInflight.messages, currentMessages)
+        const messagesForView = preserveLocalAssistantErrors(
+          matchingCachedLive?.messages ?? hydratedInflight.messages,
+          currentMessages
+        )
         resumedRunning = liveRunning
-        resumedAwaitingResponse = liveRunning && !hydratedInflight.sawAssistantPayload
+        resumedAwaitingResponse = matchingCachedLive?.awaitingResponse ?? (liveRunning && !hydratedInflight.sawAssistantPayload)
 
         setActiveSessionId(resumed.session_id)
         activeSessionIdRef.current = resumed.session_id
-        setTurnStartedAt(liveRunning ? hydratedInflight.startedAtMs : null)
+        setTurnStartedAt(liveRunning ? (matchingCachedLive?.turnStartedAt ?? hydratedInflight.startedAtMs) : null)
         const runtimeInfo = applyRuntimeInfo(resumed.info)
 
         patchSessionWorkspace(storedSessionId, runtimeInfo?.cwd)
@@ -614,11 +635,15 @@ export function useSessionActions({
             busy: liveRunning,
             awaitingResponse: resumedAwaitingResponse,
             interrupted: false,
-            sawAssistantPayload: hydratedInflight.sawAssistantPayload || state.sawAssistantPayload,
-            streamId: hydratedInflight.streamId ?? state.streamId
+            sawAssistantPayload:
+              matchingCachedLive?.sawAssistantPayload ?? (hydratedInflight.sawAssistantPayload || state.sawAssistantPayload),
+            streamId: matchingCachedLive?.streamId ?? hydratedInflight.streamId ?? state.streamId
           }),
           storedSessionId
         )
+        if (!liveRunning) {
+          clearLiveSessionState(resumed.session_id, storedSessionId)
+        }
         clearComposerDraft()
         clearComposerAttachments()
       } catch (err) {
@@ -789,9 +814,9 @@ export function useSessionActions({
       const removedPinId = removed ? sessionPinId(removed) : storedSessionId
 
       setSessions(prev => prev.filter(s => s.id !== storedSessionId))
-      // Keep $sessionsTotal in sync so the sidebar's "Load N more" footer
-      // doesn't keep claiming the removed row is still on the server.
-      setSessionsTotal(prev => Math.max(0, prev - 1))
+      // Keep global/profile totals in sync so the sidebar's "Load N more"
+      // footer doesn't keep claiming the removed row is still on the server.
+      adjustSessionTotals(removed ? normalizeProfileKey(removed.profile) : null, -1)
       $pinnedSessionIds.set(previousPinned.filter(id => id !== storedSessionId && id !== removedPinId))
 
       // Tear down before awaiting so the route effect can't resume the
@@ -814,7 +839,7 @@ export function useSessionActions({
       } catch (err) {
         if (removed) {
           setSessions(prev => [removed, ...prev])
-          setSessionsTotal(prev => prev + 1)
+          adjustSessionTotals(normalizeProfileKey(removed.profile), 1)
         }
 
         $pinnedSessionIds.set(previousPinned)
@@ -872,8 +897,8 @@ export function useSessionActions({
       setSessions(prev => prev.filter(s => s.id !== storedSessionId))
       // Archived sessions are hidden by the listSessions(min_messages=1) query
       // on the next refresh, so they count as "removed" for the load-more
-      // footer math.
-      setSessionsTotal(prev => Math.max(0, prev - 1))
+      // footer math in both the global and per-profile views.
+      adjustSessionTotals(archived ? normalizeProfileKey(archived.profile) : null, -1)
       $pinnedSessionIds.set(previousPinned.filter(id => id !== storedSessionId && id !== archivedPinId))
 
       if (wasSelected) {
@@ -886,7 +911,7 @@ export function useSessionActions({
       } catch (err) {
         if (archived) {
           setSessions(prev => [archived, ...prev.filter(s => s.id !== storedSessionId)])
-          setSessionsTotal(prev => prev + 1)
+          adjustSessionTotals(normalizeProfileKey(archived.profile), 1)
         }
 
         $pinnedSessionIds.set(previousPinned)

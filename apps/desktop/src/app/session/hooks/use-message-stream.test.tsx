@@ -1,9 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { type MutableRefObject, useCallback, useEffect, useRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { assistantTextPart, textPart } from '@/lib/chat-messages'
 import { createClientSessionState } from '@/lib/chat-runtime'
+import { flushLiveSessionCache, persistLiveSessionState } from '@/lib/live-session-cache'
+import { $sessions, $turnStartedAt, $workingSessionIds } from '@/store/session'
 import type { RpcEvent } from '@/types/hermes'
 
 import type { ClientSessionState } from '../../types'
@@ -14,7 +17,13 @@ interface HarnessHandle {
   state: (sessionId: string) => ClientSessionState | undefined
 }
 
-function Harness({ onReady }: { onReady: (handle: HarnessHandle) => void }) {
+function Harness({
+  activeList = { sessions: [] },
+  onReady
+}: {
+  activeList?: unknown
+  onReady: (handle: HarnessHandle) => void
+}) {
   const activeSessionIdRef = useRef<string | null>('active-runtime')
   const statesRef = useRef(new Map<string, ClientSessionState>())
 
@@ -42,7 +51,7 @@ function Harness({ onReady }: { onReady: (handle: HarnessHandle) => void }) {
     },
     []
   )
-  const requestGateway = useCallback(async <T,>() => ({ sessions: [] }) as T, [])
+  const requestGateway = useCallback(async <T,>() => activeList as T, [activeList])
 
   const stream = useMessageStream({
     activeSessionIdRef: activeSessionIdRef as MutableRefObject<string | null>,
@@ -67,6 +76,10 @@ function Harness({ onReady }: { onReady: (handle: HarnessHandle) => void }) {
 describe('useMessageStream session lifecycle', () => {
   afterEach(() => {
     cleanup()
+    window.localStorage.clear()
+    $sessions.set([])
+    $turnStartedAt.set(null)
+    $workingSessionIds.set([])
   })
 
   it('applies server idle state for a non-active session', () => {
@@ -88,6 +101,85 @@ describe('useMessageStream session lifecycle', () => {
       interrupted: false,
       pendingBranchGroup: null,
       streamId: null
+    })
+  })
+
+  it('hydrates a live active session from the desktop cache on gateway ready', async () => {
+    const turnStartedAt = Date.now() - 123_000
+    const cached = {
+      ...createClientSessionState('stored-live', [
+        {
+          id: 'user-live',
+          role: 'user' as const,
+          parts: [textPart('cached prompt')]
+        },
+        {
+          id: 'assistant-live',
+          role: 'assistant' as const,
+          parts: [assistantTextPart('cached partial with tool state')],
+          pending: true
+        }
+      ]),
+      awaitingResponse: false,
+      busy: true,
+      sawAssistantPayload: true,
+      streamId: 'assistant-live'
+    }
+
+    persistLiveSessionState('active-runtime', cached, turnStartedAt)
+    flushLiveSessionCache()
+
+    let handle: HarnessHandle | null = null
+
+    render(
+      <Harness
+        activeList={{
+          sessions: [
+            {
+              id: 'active-runtime',
+              inflight: { assistant: 'server fallback', user: 'cached prompt' },
+              last_active: 20,
+              message_count: 0,
+              model: 'model-live',
+              preview: 'cached prompt',
+              running: true,
+              session_key: 'stored-live',
+              started_at: 10,
+              status: 'working',
+              title: 'Live session'
+            }
+          ]
+        }}
+        onReady={next => (handle = next)}
+      />
+    )
+
+    act(() => {
+      handle!.event({
+        payload: {},
+        session_id: '',
+        type: 'gateway.ready'
+      })
+    })
+
+    await waitFor(() => {
+      expect(handle!.state('active-runtime')?.messages).toEqual(cached.messages)
+    })
+
+    expect(handle!.state('active-runtime')).toMatchObject({
+      awaitingResponse: false,
+      busy: true,
+      sawAssistantPayload: true,
+      streamId: 'assistant-live'
+    })
+    expect($turnStartedAt.get()).toBe(turnStartedAt)
+    expect($workingSessionIds.get()).toEqual(['stored-live'])
+    expect($sessions.get()[0]).toMatchObject({
+      id: 'stored-live',
+      is_active: false,
+      model: 'model-live',
+      preview: 'cached prompt',
+      title: 'Live session'
     })
   })
 })

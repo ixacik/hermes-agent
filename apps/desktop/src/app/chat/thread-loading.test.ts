@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { ChatMessage } from '@/lib/chat-messages'
 
-import { lastVisibleMessageIsUser, threadLoadingState } from './thread-loading'
+import { activeTurnRunningState, lastVisibleMessageIsUser, threadLoadingState } from './thread-loading'
 
 function message(id: string, role: ChatMessage['role'], hidden = false): ChatMessage {
   return {
@@ -14,6 +14,13 @@ function message(id: string, role: ChatMessage['role'], hidden = false): ChatMes
 }
 
 describe('thread loading state', () => {
+  it('does not treat session hydration busy state as an active turn', () => {
+    expect(activeTurnRunningState(true, true, null, [])).toBe(false)
+    expect(activeTurnRunningState(false, true, 'session-1', [])).toBe(false)
+    expect(activeTurnRunningState(false, true, 'session-1', ['session-1'])).toBe(true)
+    expect(activeTurnRunningState(false, true, null, [])).toBe(true)
+  })
+
   it('returns session when routed session is still hydrating', () => {
     expect(threadLoadingState(true, true, true, false)).toBe('session')
   })

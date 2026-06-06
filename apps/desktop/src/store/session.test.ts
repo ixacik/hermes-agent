@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest'
 
 import type { SessionInfo } from '@/types/hermes'
 
-import { $attentionSessionIds, mergeSessionPage, sessionPinId, setSessionAttention } from './session'
+import {
+  $attentionSessionIds,
+  $sessionProfileTotals,
+  $sessionsTotal,
+  adjustSessionTotals,
+  mergeSessionPage,
+  sessionPinId,
+  setSessionAttention
+} from './session'
 
 const session = (over: Partial<SessionInfo>): SessionInfo => ({
   archived: false,
@@ -60,6 +68,49 @@ describe('sessionPinId', () => {
     // After auto-compression the entry surfaces under a fresh tip id but keeps
     // the original root — pinning on the root keeps the pin stable.
     expect(sessionPinId(session({ id: 'tip', _lineage_root_id: 'root' }))).toBe('root')
+  })
+})
+
+describe('adjustSessionTotals', () => {
+  it('updates the global and matching profile totals together', () => {
+    $sessionsTotal.set(30)
+    $sessionProfileTotals.set({ default: 12, remote: 18 })
+
+    adjustSessionTotals('remote', -1)
+
+    expect($sessionsTotal.get()).toBe(29)
+    expect($sessionProfileTotals.get()).toEqual({ default: 12, remote: 17 })
+  })
+
+  it('restores both totals for rollback', () => {
+    $sessionsTotal.set(29)
+    $sessionProfileTotals.set({ remote: 17 })
+
+    adjustSessionTotals('remote', 1)
+
+    expect($sessionsTotal.get()).toBe(30)
+    expect($sessionProfileTotals.get()).toEqual({ remote: 18 })
+  })
+
+  it('clamps totals at zero', () => {
+    $sessionsTotal.set(0)
+    $sessionProfileTotals.set({ remote: 0 })
+
+    adjustSessionTotals('remote', -1)
+
+    expect($sessionsTotal.get()).toBe(0)
+    expect($sessionProfileTotals.get()).toEqual({ remote: 0 })
+  })
+
+  it('leaves the profile map alone when that profile total is unknown', () => {
+    $sessionsTotal.set(5)
+    const totals = { default: 5 }
+    $sessionProfileTotals.set(totals)
+
+    adjustSessionTotals('remote', -1)
+
+    expect($sessionsTotal.get()).toBe(4)
+    expect($sessionProfileTotals.get()).toBe(totals)
   })
 })
 

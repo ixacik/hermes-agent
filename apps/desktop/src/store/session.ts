@@ -121,6 +121,25 @@ export const setSessions = (next: Updater<SessionInfo[]>) => updateAtom($session
 export const setSessionsTotal = (next: Updater<number>) => updateAtom($sessionsTotal, next)
 export const setSessionProfileTotals = (next: Updater<Record<string, number>>) =>
   updateAtom($sessionProfileTotals, next)
+
+export function adjustSessionTotals(profileKey: string | null | undefined, delta: number): void {
+  setSessionsTotal(prev => Math.max(0, prev + delta))
+
+  const key = String(profileKey ?? '').trim()
+
+  if (!key) {
+    return
+  }
+
+  setSessionProfileTotals(prev => {
+    if (!(key in prev)) {
+      return prev
+    }
+
+    return { ...prev, [key]: Math.max(0, prev[key] + delta) }
+  })
+}
+
 export const setSessionsLoading = (next: Updater<boolean>) => updateAtom($sessionsLoading, next)
 export const setWorkingSessionIds = (next: Updater<string[]>) => updateAtom($workingSessionIds, next)
 export const setActiveSessionId = (next: Updater<string | null>) => updateAtom($activeSessionId, next)

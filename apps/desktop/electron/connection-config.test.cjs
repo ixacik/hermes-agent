@@ -17,6 +17,7 @@ const {
   AT_COOKIE_VARIANTS,
   RT_COOKIE_VARIANTS,
   authModeFromStatus,
+  buildGlobalRemoteSessionRequest,
   buildGatewayWsUrl,
   buildGatewayWsUrlWithTicket,
   connectionScopeKey,
@@ -144,6 +145,32 @@ test('buildGatewayWsUrlWithTicket uses ?ticket= not ?token=', () => {
 
 test('buildGatewayWsUrlWithTicket url-encodes the ticket', () => {
   assert.equal(buildGatewayWsUrlWithTicket('https://host', 'a+b/c'), 'wss://host/api/ws?ticket=a%2Bb%2Fc')
+})
+
+// --- buildGlobalRemoteSessionRequest ---
+
+test('buildGlobalRemoteSessionRequest puts DELETE profile in the query without a body', () => {
+  assert.deepEqual(buildGlobalRemoteSessionRequest('/api/sessions/s1', 'DELETE', { profile: 'coder' }, 'coder'), {
+    path: '/api/sessions/s1?profile=coder',
+    body: undefined
+  })
+})
+
+test('buildGlobalRemoteSessionRequest preserves PATCH body profile for the backend', () => {
+  assert.deepEqual(buildGlobalRemoteSessionRequest('/api/sessions/s1', 'PATCH', { title: 'Next' }, 'coder'), {
+    path: '/api/sessions/s1?profile=coder',
+    body: { title: 'Next', profile: 'coder' }
+  })
+})
+
+test('buildGlobalRemoteSessionRequest encodes profile names and appends to existing query strings', () => {
+  assert.deepEqual(
+    buildGlobalRemoteSessionRequest('/api/sessions/s1/messages?limit=1', 'GET', undefined, 'work profile'),
+    {
+      path: '/api/sessions/s1/messages?limit=1&profile=work%20profile',
+      body: undefined
+    }
+  )
 })
 
 // --- authModeFromStatus ---

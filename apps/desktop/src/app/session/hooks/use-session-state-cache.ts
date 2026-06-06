@@ -4,8 +4,9 @@ import { type MutableRefObject, useCallback, useEffect, useRef } from 'react'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { preserveLocalAssistantErrors } from '@/lib/chat-messages'
 import { createClientSessionState } from '@/lib/chat-runtime'
+import { persistLiveSessionState } from '@/lib/live-session-cache'
 import { setMutableRef } from '@/lib/mutable-ref'
-import { $busy, $messages, noteSessionActivity, setSessionAttention, setSessionWorking } from '@/store/session'
+import { $busy, $messages, $turnStartedAt, noteSessionActivity, setSessionAttention, setSessionWorking } from '@/store/session'
 
 import type { ClientSessionState } from '../../types'
 
@@ -165,6 +166,8 @@ export function useSessionStateCache({
       if (next.busy) {
         noteSessionActivity(next.storedSessionId)
       }
+
+      persistLiveSessionState(sessionId, next, sessionId === activeSessionIdRef.current ? $turnStartedAt.get() : null)
 
       syncSessionStateToView(sessionId, next)
 

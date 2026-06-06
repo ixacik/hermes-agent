@@ -31,6 +31,7 @@ const { canImportHermesCli, verifyHermesCli } = require('./backend-probes.cjs')
 const { probeGatewayWebSocket } = require('./gateway-ws-probe.cjs')
 const {
   authModeFromStatus,
+  buildGlobalRemoteSessionRequest,
   buildGatewayWsUrl,
   buildGatewayWsUrlWithTicket,
   connectionScopeKey,
@@ -2264,6 +2265,171 @@ function fetchJson(url, token, options = {}) {
   })
 }
 
+function safeUrlForLog(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl)
+    for (const key of ['token', 'ticket', 'code', 'state']) {
+      if (parsed.searchParams.has(key)) {
+        parsed.searchParams.set(key, '<redacted>')
+      }
+    }
+    return `${parsed.origin}${parsed.pathname}${parsed.search}`
+  } catch {
+    return '<invalid-url>'
+  }
+}
+
+function setCookieHeadersArray(headers) {
+  if (!headers) {
+    return []
+  }
+  return Array.isArray(headers) ? headers : [String(headers)]
+}
+
+function parseSetCookie(rawCookie, url) {
+  const parts = String(rawCookie || '')
+    .split(';')
+    .map(part => part.trim())
+    .filter(Boolean)
+  const [nameValue, ...attrs] = parts
+  const equals = nameValue?.indexOf('=') ?? -1
+  if (equals <= 0) {
+    return null
+  }
+
+  const details = {
+    url,
+    name: nameValue.slice(0, equals),
+    value: nameValue.slice(equals + 1)
+  }
+
+  for (const attr of attrs) {
+    const [rawName, ...rawValueParts] = attr.split('=')
+    const name = rawName.trim().toLowerCase()
+    const value = rawValueParts.join('=').trim()
+
+    if (name === 'domain' && value) {
+      details.domain = value
+    } else if (name === 'path' && value) {
+      details.path = value
+    } else if (name === 'expires' && value) {
+      const ms = Date.parse(value)
+      if (Number.isFinite(ms)) {
+        details.expirationDate = Math.floor(ms / 1000)
+      }
+    } else if (name === 'max-age' && value) {
+      const seconds = Number(value)
+      if (Number.isFinite(seconds)) {
+        details.expirationDate = Math.floor(Date.now() / 1000 + seconds)
+      }
+    } else if (name === 'secure') {
+      details.secure = true
+    } else if (name === 'httponly') {
+      details.httpOnly = true
+    }
+  }
+
+  return details
+}
+
+async function syncOauthSetCookies(sess, url, setCookieHeaders) {
+  const cookies = setCookieHeadersArray(setCookieHeaders)
+  if (!cookies.length) {
+    return
+  }
+
+  const origin = new URL(url).origin
+  await Promise.all(
+    cookies.map(async rawCookie => {
+      const details = parseSetCookie(rawCookie, url)
+      if (!details) {
+        return
+      }
+      if (details.expirationDate && details.expirationDate <= Math.floor(Date.now() / 1000)) {
+        await sess.cookies.remove(origin, details.name).catch(error => {
+          rememberLog(`[api][oauth] failed to remove expired cookie ${details.name}: ${error.message}`)
+        })
+        return
+      }
+      await sess.cookies.set(details).catch(error => {
+        rememberLog(`[api][oauth] failed to persist cookie ${details.name}: ${error.message}`)
+      })
+    })
+  )
+}
+
+async function cookieHeaderForOauthSession(sess, url) {
+  const cookies = await sess.cookies.get({ url })
+  return cookies
+    .filter(cookie => cookie?.name && cookie.value)
+    .map(cookie => `${cookie.name}=${cookie.value}`)
+    .join('; ')
+}
+
+function fetchJsonViaOauthCookieHeader(sess, url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const body = options.body === undefined ? undefined : Buffer.from(JSON.stringify(options.body))
+    const parsed = new URL(url)
+    const client = parsed.protocol === 'https:' ? https : http
+    const timeoutMs = resolveTimeoutMs(options.timeoutMs, DEFAULT_FETCH_TIMEOUT_MS)
+
+    cookieHeaderForOauthSession(sess, url)
+      .then(cookieHeader => {
+        const req = client.request(
+          parsed,
+          {
+            method: options.method || 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+              ...(body ? { 'Content-Length': String(body.length) } : {})
+            }
+          },
+          res => {
+            const chunks = []
+            res.on('error', reject)
+            res.on('data', chunk => chunks.push(chunk))
+            res.on('end', () => {
+              void syncOauthSetCookies(sess, url, res.headers['set-cookie']).finally(() => {
+                const text = Buffer.concat(chunks).toString('utf8')
+                const statusCode = res.statusCode || 500
+                if (statusCode >= 400) {
+                  const err = new Error(`${statusCode}: ${text || res.statusMessage || ''}`)
+                  err.statusCode = statusCode
+                  reject(err)
+                  return
+                }
+                if (!text) {
+                  resolve(null)
+                  return
+                }
+                const looksHtml = /^\s*<(?:!doctype|html)/i.test(text)
+                const contentType = String(res.headers['content-type'] || '')
+                if (looksHtml || contentType.includes('text/html')) {
+                  reject(new Error(`Expected JSON from ${safeUrlForLog(url)} but got HTML (status ${statusCode}).`))
+                  return
+                }
+                try {
+                  resolve(JSON.parse(text))
+                } catch {
+                  reject(new Error(`Invalid JSON from ${safeUrlForLog(url)} (status ${statusCode}): ${text.slice(0, 200)}`))
+                }
+              })
+            })
+          }
+        )
+
+        req.on('error', reject)
+        req.setTimeout(timeoutMs, () => {
+          req.destroy(new Error(`Timed out connecting to Hermes backend after ${timeoutMs}ms`))
+        })
+        if (body) req.write(body)
+        req.end()
+      })
+      .catch(reject)
+  })
+}
+
 function fetchPublicJson(url, options = {}) {
   // Credential-free JSON GET/POST for public gateway endpoints
   // (``/api/status``, ``/api/auth/providers``). Unlike ``fetchJson`` it sends
@@ -3533,89 +3699,84 @@ function openOauthLoginWindow(baseUrl) {
 }
 
 // JSON request routed through the OAuth session partition so the HttpOnly
-// session cookie is attached automatically by Electron's net stack. Used for
-// authed REST against a gated gateway, including minting WS tickets.
-function fetchJsonViaOauthSession(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const sess = getOauthSession()
-    if (!sess) {
-      reject(new Error('OAuth session partition is unavailable.'))
-      return
-    }
-    let parsed
-    try {
-      parsed = new URL(url)
-    } catch (error) {
-      reject(new Error(`Invalid URL: ${error.message}`))
-      return
-    }
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      reject(new Error(`Unsupported Hermes backend URL protocol: ${parsed.protocol}`))
-      return
-    }
-    const body = options.body === undefined ? undefined : Buffer.from(JSON.stringify(options.body))
-    const timeoutMs = resolveTimeoutMs(options.timeoutMs, DEFAULT_FETCH_TIMEOUT_MS)
+// session cookie is attached automatically by Electron's Chromium network
+// stack. Used for authed REST against a gated gateway, including minting WS
+// tickets.
+async function fetchJsonViaOauthSession(url, options = {}) {
+  const sess = getOauthSession()
+  if (!sess) {
+    throw new Error('OAuth session partition is unavailable.')
+  }
 
-    const request = electronNet.request({
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch (error) {
+    throw new Error(`Invalid URL: ${error.message}`)
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`Unsupported Hermes backend URL protocol: ${parsed.protocol}`)
+  }
+  if (typeof sess.fetch !== 'function') {
+    throw new Error('Electron session.fetch is unavailable for OAuth gateway requests.')
+  }
+
+  const timeoutMs = resolveTimeoutMs(options.timeoutMs, DEFAULT_FETCH_TIMEOUT_MS)
+  const controller = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
+
+  let response
+  try {
+    rememberLog(`[api][oauth] ${options.method || 'GET'} ${safeUrlForLog(url)} via session.fetch`)
+    response = await sess.fetch(url, {
       method: options.method || 'GET',
-      url,
-      session: sess,
-      useSessionCookies: true,
-      redirect: 'follow'
+      headers: { 'Content-Type': 'application/json' },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      credentials: 'include',
+      redirect: 'follow',
+      signal: controller.signal
     })
-    request.setHeader('Content-Type', 'application/json')
-    if (body) request.setHeader('Content-Length', String(body.length))
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(`Timed out connecting to Hermes backend after ${timeoutMs}ms`)
+    }
+    if (/ERR_INVALID_ARGUMENT/i.test(String(error?.message || error))) {
+      rememberLog(
+        `[api][oauth] ${options.method || 'GET'} ${safeUrlForLog(url)} failed with ${error.message}; retrying with Cookie header`
+      )
+      return fetchJsonViaOauthCookieHeader(sess, url, options)
+    }
+    throw error
+  } finally {
+    clearTimeout(timer)
+  }
 
-    let timedOut = false
-    const timer = setTimeout(() => {
-      timedOut = true
-      try {
-        request.abort()
-      } catch {
-        // already finished
-      }
-      reject(new Error(`Timed out connecting to Hermes backend after ${timeoutMs}ms`))
-    }, timeoutMs)
+  const text = await response.text()
+  const statusCode = response.status || 500
+  if (statusCode >= 400) {
+    const err = new Error(`${statusCode}: ${text || ''}`)
+    err.statusCode = statusCode
+    throw err
+  }
+  if (!text) {
+    return null
+  }
 
-    request.on('response', res => {
-      const chunks = []
-      res.on('data', chunk => chunks.push(Buffer.from(chunk)))
-      res.on('end', () => {
-        if (timedOut) return
-        clearTimeout(timer)
-        const text = Buffer.concat(chunks).toString('utf8')
-        const statusCode = res.statusCode || 500
-        if (statusCode >= 400) {
-          const err = new Error(`${statusCode}: ${text || ''}`)
-          err.statusCode = statusCode
-          reject(err)
-          return
-        }
-        if (!text) {
-          resolve(null)
-          return
-        }
-        const looksHtml = /^\s*<(?:!doctype|html)/i.test(text)
-        const contentType = String(res.headers['content-type'] || res.headers['Content-Type'] || '')
-        if (looksHtml || contentType.includes('text/html')) {
-          reject(new Error(`Expected JSON from ${url} but got HTML (status ${statusCode}).`))
-          return
-        }
-        try {
-          resolve(JSON.parse(text))
-        } catch {
-          reject(new Error(`Invalid JSON from ${url} (status ${statusCode}): ${text.slice(0, 200)}`))
-        }
-      })
-    })
-    request.on('error', error => {
-      if (timedOut) return
-      clearTimeout(timer)
-      reject(error)
-    })
-    if (body) request.write(body)
-    request.end()
-  })
+  const looksHtml = /^\s*<(?:!doctype|html)/i.test(text)
+  const contentType = String(response.headers.get('content-type') || '')
+  if (looksHtml || contentType.includes('text/html')) {
+    throw new Error(`Expected JSON from ${url} but got HTML (status ${statusCode}).`)
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`Invalid JSON from ${url} (status ${statusCode}): ${text.slice(0, 200)}`)
+  }
 }
 
 // Mint a single-use WS ticket for a gated gateway. Returns the ticket string.
@@ -4906,13 +5067,11 @@ async function interceptSessionRequestForRemote(request) {
     }
     if (globalRemoteActive()) {
       // Single global backend: keep ?profile= so it opens the right state.db.
-      const sep = pathname.includes('?') ? '&' : '?'
-      const path = `${pathname}${sep}profile=${encodeURIComponent(profile)}`
+      const routed = buildGlobalRemoteSessionRequest(pathname, method, request.body, profile)
       if (method === 'GET') {
-        return fetchJsonForProfile(null, path)
+        return fetchJsonForProfile(null, routed.path)
       }
-      const body = request.body && typeof request.body === 'object' ? { ...request.body, profile } : { profile }
-      return requestJsonForProfile(null, path, method, body)
+      return requestJsonForProfile(null, routed.path, method, routed.body)
     }
     return undefined
   }

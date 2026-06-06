@@ -99,23 +99,24 @@ const SettingsView = lazy(async () => ({ default: (await import('./settings')).S
 const SkillsView = lazy(async () => ({ default: (await import('./skills')).SkillsView }))
 
 // Rows a session refresh must preserve even if the aggregator omits them:
-// in-flight first turns (message_count 0), pinned rows aged off the page, and
-// the actively-viewed chat (its "working" flag clears a beat before the
-// aggregator sees the persisted row). Pass `scope` to only keep the active row
-// when it belongs to the profile being paged.
+// server-confirmed in-flight turns (message_count 0) and pinned rows aged off
+// the page. Pass `scope` to only keep rows that belong to the profile being
+// paged. The actively-viewed chat is intentionally not kept by client optimism;
+// live runtime rows are merged from session.active_list instead.
 function sessionsToKeep(scope?: string): Set<string> {
   const keep = new Set<string>([...$workingSessionIds.get(), ...$pinnedSessionIds.get()])
-  const active = $selectedStoredSessionId.get()
 
-  if (active) {
-    const session = scope ? $sessions.get().find(s => s.id === active) : null
-
-    if (!scope || !session || normalizeProfileKey(session.profile) === scope) {
-      keep.add(active)
-    }
+  if (!scope) {
+    return keep
   }
 
-  return keep
+  return new Set(
+    [...keep].filter(id => {
+      const session = $sessions.get().find(s => s.id === id || s._lineage_root_id === id)
+
+      return !session || normalizeProfileKey(session.profile) === scope
+    })
+  )
 }
 
 export function DesktopController() {

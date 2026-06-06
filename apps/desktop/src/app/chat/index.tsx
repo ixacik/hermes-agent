@@ -37,6 +37,7 @@ import {
   $messages,
   $selectedStoredSessionId,
   $sessions,
+  $workingSessionIds,
   sessionPinId
 } from '@/store/session'
 import type { ModelOptionsResponse } from '@/types/hermes'
@@ -53,7 +54,7 @@ import type { ChatBarState } from './composer/types'
 import type { DroppedFile } from './hooks/use-composer-actions'
 import { useFileDropZone } from './hooks/use-file-drop-zone'
 import { SessionActionsMenu } from './sidebar/session-actions-menu'
-import { lastVisibleMessageIsUser, threadLoadingState } from './thread-loading'
+import { activeTurnRunningState, lastVisibleMessageIsUser, threadLoadingState } from './thread-loading'
 
 interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   gateway: HermesGateway | null
@@ -193,6 +194,7 @@ export function ChatView({
   const introSeed = useStore($introSeed)
   const messages = useStore($messages)
   const selectedSessionId = useStore($selectedStoredSessionId)
+  const workingSessionIds = useStore($workingSessionIds)
   const runtimeMessageCacheRef = useRef(new WeakMap<ChatMessage, ThreadMessage>())
   const isRoutedSessionView = Boolean(routeSessionId(location.pathname))
 
@@ -201,11 +203,17 @@ export function ChatView({
 
   // Session is still loading if the route references a session we haven't
   // resumed yet. Once `activeSessionId` is set (runtime has resumed), the
-  // session exists — even if it has zero messages (a brand-new routed
-  // session). The flicker where `busy` flips true briefly during hydrate
-  // is handled by `threadLoadingState`'s last-visible-user gate.
+  // session exists, even if it has zero messages. While hydrating an uncached
+  // routed session, `busy` may be true only to block actions; don't pass that
+  // through as a live assistant turn or the thread flashes "Working...".
   const loadingSession = isRoutedSessionView && messages.length === 0 && !activeSessionId
-  const threadLoading = threadLoadingState(loadingSession, busy, awaitingResponse, lastVisibleMessageIsUser(messages))
+  const activeTurnRunning = activeTurnRunningState(loadingSession, busy, selectedSessionId, workingSessionIds)
+  const threadLoading = threadLoadingState(
+    loadingSession,
+    activeTurnRunning,
+    awaitingResponse,
+    lastVisibleMessageIsUser(messages)
+  )
   const showChatBar = !loadingSession
   const threadKey = selectedSessionId || activeSessionId || (isRoutedSessionView ? location.pathname : 'new')
 
@@ -289,7 +297,7 @@ export function ChatView({
 
   const runtime = useIncrementalExternalStoreRuntime<ThreadMessage>({
     messageRepository: runtimeMessageRepository,
-    isRunning: busy,
+    isRunning: activeTurnRunning,
     setMessages: onThreadMessagesChange,
     onNew: async () => {
       // Submission is handled explicitly by ChatBar.
@@ -360,7 +368,7 @@ export function ChatView({
           {showChatBar && (
             <Suspense fallback={<ChatBarFallback />}>
               <ChatBar
-                busy={busy}
+                busy={activeTurnRunning}
                 cwd={currentCwd}
                 disabled={!gatewayOpen}
                 focusKey={activeSessionId}

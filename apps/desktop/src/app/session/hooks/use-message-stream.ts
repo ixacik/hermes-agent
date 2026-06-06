@@ -15,7 +15,8 @@ import {
 } from '@/lib/chat-messages'
 import { coerceGatewayText, coerceThinkingText, INTERRUPTED_MARKER, normalizePersonalityValue } from '@/lib/chat-runtime'
 import { triggerHaptic } from '@/lib/haptics'
-import { hydrateInflightMessages, inflightStartedAtMs } from '@/lib/live-turn-replay'
+import { clearLiveSessionState, restoreLiveSessionState } from '@/lib/live-session-cache'
+import { hydrateInflightMessages } from '@/lib/live-turn-replay'
 import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
 import { setClarifyRequest } from '@/store/clarify'
 import { notify } from '@/store/notifications'
@@ -139,6 +140,23 @@ function activeRowToSessionInfo(row: ActiveSessionRow): null | SessionInfo {
     tool_call_count: 0,
     ...(row.profile ? { profile: row.profile } : {})
   }
+}
+
+function cachedTurnMatchesRow(
+  cache: ReturnType<typeof restoreLiveSessionState>,
+  row: ActiveSessionRow
+): cache is NonNullable<ReturnType<typeof restoreLiveSessionState>> {
+  if (!cache?.busy) {
+    return false
+  }
+
+  const userText = String(row.inflight?.user || '').trim()
+
+  if (!userText) {
+    return true
+  }
+
+  return cache.messages.some(message => message.role === 'user' && !message.hidden && chatMessageText(message).trim() === userText)
 }
 
 // Gateway/provider failures sometimes arrive as message.complete text instead
@@ -696,6 +714,7 @@ export function useMessageStream({
 
             if (activeRuntimeId && !activeLiveRow) {
               setTurnStartedAt(null)
+              clearLiveSessionState(activeRuntimeId)
               updateSessionState(activeRuntimeId, state => ({
                 ...state,
                 awaitingResponse: false,
@@ -712,33 +731,37 @@ export function useMessageStream({
               }
 
               const busy = Boolean(row.running || isLiveSessionStatus(row.status))
-              const hydrated = row.inflight
-                ? hydrateInflightMessages([], row.id, row.inflight)
-                : null
+              const storedSessionId = row.session_key ?? null
+              const restoredLive = busy ? restoreLiveSessionState(row.id, storedSessionId) : null
+              const cachedLive = cachedTurnMatchesRow(restoredLive, row) ? restoredLive : null
+              const hydrated = row.inflight ? hydrateInflightMessages([], row.id, row.inflight) : null
 
               if (busy && row.id === activeSessionIdRef.current) {
-                setTurnStartedAt(hydrated?.startedAtMs ?? inflightStartedAtMs(row.inflight) ?? null)
+                setTurnStartedAt(cachedLive?.turnStartedAt ?? hydrated?.startedAtMs ?? null)
+              } else if (!busy) {
+                clearLiveSessionState(row.id, storedSessionId)
               }
 
               updateSessionState(
                 row.id,
                 state => {
-                  const inflight = row.inflight
-                    ? hydrateInflightMessages(state.messages, row.id!, row.inflight)
-                    : null
+                  const inflight = row.inflight ? hydrateInflightMessages(state.messages, row.id!, row.inflight) : null
+                  const cachedMessages = cachedLive?.busy ? cachedLive.messages : null
 
                   return {
                     ...state,
-                    ...(inflight ? { messages: inflight.messages } : {}),
+                    ...(cachedMessages ? { messages: cachedMessages } : inflight ? { messages: inflight.messages } : {}),
                     busy,
-                    awaitingResponse: busy ? state.awaitingResponse && !inflight?.sawAssistantPayload : false,
+                    awaitingResponse: busy
+                      ? (cachedLive?.awaitingResponse ?? (state.awaitingResponse && !inflight?.sawAssistantPayload))
+                      : false,
                     interrupted: false,
                     needsInput: row.status === 'waiting',
-                    sawAssistantPayload: Boolean(inflight?.sawAssistantPayload || state.sawAssistantPayload),
-                    streamId: inflight?.streamId ?? state.streamId
+                    sawAssistantPayload: Boolean(cachedLive?.sawAssistantPayload || inflight?.sawAssistantPayload || state.sawAssistantPayload),
+                    streamId: cachedLive?.streamId ?? inflight?.streamId ?? state.streamId
                   }
                 },
-                row.session_key ?? null
+                storedSessionId
               )
             }
           })
@@ -856,6 +879,11 @@ export function useMessageStream({
 
         if (isActiveEvent) {
           triggerHaptic('streamStart')
+          setTurnStartedAt(
+            typeof payload?.started_at === 'number' && Number.isFinite(payload.started_at)
+              ? Math.floor(payload.started_at * 1000)
+              : Date.now()
+          )
         }
 
         updateSessionState(sessionId, state => ({
@@ -865,14 +893,6 @@ export function useMessageStream({
           sawAssistantPayload: false,
           interrupted: false
         }))
-
-        if (isActiveEvent) {
-          setTurnStartedAt(
-            typeof payload?.started_at === 'number' && Number.isFinite(payload.started_at)
-              ? Math.floor(payload.started_at * 1000)
-              : Date.now()
-          )
-        }
       } else if (event.type === 'message.delta') {
         if (sessionId) {
           appendAssistantDelta(sessionId, coerceGatewayText(payload?.text))

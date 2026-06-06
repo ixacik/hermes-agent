@@ -329,18 +329,10 @@ export interface SessionResumeResponse {
 
 export interface SessionInflightTurn {
   assistant?: string
-  events?: InflightReplayEvent[]
   interrupt_requested?: boolean
-  started_at?: number
   streaming?: boolean
   turn_id?: string
   user?: string
-}
-
-export interface InflightReplayEvent {
-  payload?: import('@/lib/chat-messages').GatewayEventPayload
-  seq?: number
-  type: string
 }
 
 export interface SessionRuntimeInfo {

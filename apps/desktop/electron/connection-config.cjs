@@ -78,6 +78,25 @@ function buildGatewayWsUrlWithTicket(baseUrl, ticket) {
   return `${wsScheme}://${parsed.host}${prefix}/api/ws?ticket=${encodeURIComponent(ticket)}`
 }
 
+function buildGlobalRemoteSessionRequest(pathname, method, body, profile) {
+  const path = String(pathname || '')
+  const profileName = connectionScopeKey(profile)
+  const pathWithProfile = profileName
+    ? `${path}${path.includes('?') ? '&' : '?'}profile=${encodeURIComponent(profileName)}`
+    : path
+  const upperMethod = String(method || 'GET').toUpperCase()
+
+  if (upperMethod === 'GET' || upperMethod === 'DELETE') {
+    return { path: pathWithProfile, body: undefined }
+  }
+
+  if (body && typeof body === 'object' && !Array.isArray(body)) {
+    return { path: pathWithProfile, body: { ...body, ...(profileName ? { profile: profileName } : {}) } }
+  }
+
+  return { path: pathWithProfile, body: profileName ? { profile: profileName } : body }
+}
+
 /**
  * Build the WS URL the renderer would connect with, so the connection test can
  * exercise the same transport the app actually uses.
@@ -240,6 +259,7 @@ module.exports = {
   AT_COOKIE_VARIANTS,
   RT_COOKIE_VARIANTS,
   authModeFromStatus,
+  buildGlobalRemoteSessionRequest,
   buildGatewayWsUrl,
   buildGatewayWsUrlWithTicket,
   connectionScopeKey,

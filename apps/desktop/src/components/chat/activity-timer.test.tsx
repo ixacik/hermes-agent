@@ -1,10 +1,18 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { __resetElapsedTimerRegistryForTests, useElapsedSeconds } from './activity-timer'
 
-function Probe({ active, timerKey }: { active: boolean; timerKey?: string }) {
-  const elapsed = useElapsedSeconds(active, timerKey)
+function Probe({
+  active,
+  initialStartedAt,
+  timerKey
+}: {
+  active: boolean
+  initialStartedAt?: number
+  timerKey?: string
+}) {
+  const elapsed = useElapsedSeconds(active, timerKey, initialStartedAt)
 
   return <span data-testid="elapsed">{elapsed}</span>
 }
@@ -17,6 +25,7 @@ describe('useElapsedSeconds', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.useRealTimers()
     __resetElapsedTimerRegistryForTests()
   })
@@ -39,5 +48,11 @@ describe('useElapsedSeconds', () => {
     render(<Probe active timerKey="tool:abc" />)
 
     expect(screen.getByTestId('elapsed').textContent).toBe('8')
+  })
+
+  it('uses an authoritative initial start time', () => {
+    render(<Probe active initialStartedAt={Date.now() - 42_000} timerKey="turn:server" />)
+
+    expect(screen.getByTestId('elapsed').textContent).toBe('42')
   })
 })
