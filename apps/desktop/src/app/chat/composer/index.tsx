@@ -22,7 +22,12 @@ import { SLASH_COMMAND_RE } from '@/lib/chat-runtime'
 import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
-import { $composerAttachments, clearComposerAttachments, type ComposerAttachment } from '@/store/composer'
+import {
+  $composerAttachments,
+  clearComposerAttachments,
+  type ComposerAttachment,
+  hasBlockedComposerImageUploads
+} from '@/store/composer'
 import {
   $queuedPromptsBySession,
   enqueueQueuedPrompt,
@@ -152,6 +157,7 @@ export function ChatBar({
   const slash = useSlashCompletions({ gateway: gateway ?? null })
 
   const hasComposerPayload = draft.trim().length > 0 || attachments.length > 0
+  const imageUploadsBlocked = hasBlockedComposerImageUploads(attachments)
   const editingQueuedPrompt = queueEdit ? (queuedPrompts.find(entry => entry.id === queueEdit.entryId) ?? null) : null
   const showHelpHint = draft === '?'
 
@@ -263,11 +269,11 @@ export function ChatBar({
   }, [appendExternalText, disabled])
 
   // TUI-style "always listening" composer: whenever the app is focused and the
-  // chat is the active surface, the main composer holds keyboard focus — type
-  // anywhere routes here, clicking empty space keeps it focused, and regaining
-  // app focus re-focuses it. We bow out for overlays (settings, command
-  // palette, dialogs, menus), other inputs (search, terminal, the inline edit
-  // composer), and an active text selection, so you can still select/copy.
+  // chat is the active surface, the main composer holds keyboard focus. Type
+  // anywhere in the chat chrome routes here; clicks, selections, and app focus
+  // restores reassert the composer after the browser has finished its own
+  // pointer/focus work. We still bow out for overlays, other text fields, and
+  // the inline edit composer because those surfaces deliberately own input.
   useEffect(() => {
     const editor = editorRef.current
 
@@ -291,12 +297,6 @@ export function ChatBar({
         )
       )
 
-    const hasTextSelection = () => {
-      const sel = window.getSelection()
-
-      return Boolean(sel && !sel.isCollapsed && sel.toString().length > 0)
-    }
-
     const canGrab = () => {
       if (disabled || !document.hasFocus()) {
         return false
@@ -309,7 +309,7 @@ export function ChatBar({
         return false
       }
 
-      return !overlayOpen() && !isEditableElsewhere(document.activeElement) && !hasTextSelection()
+      return !overlayOpen() && !isEditableElsewhere(document.activeElement)
     }
 
     const grab = () => {
@@ -341,10 +341,10 @@ export function ChatBar({
       }
     }
 
-    // Type-anywhere: a printable key (no modifiers) while focus is loose pulls
-    // it into the composer synchronously, so the keystroke itself lands here.
+    // Type-anywhere: a text-producing key (no command modifiers) while focus is
+    // loose pulls it into the composer before normal key handling continues.
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.key.length !== 1) {
         return
       }
 
@@ -359,7 +359,7 @@ export function ChatBar({
     document.addEventListener('focusout', onFocusOut)
     window.addEventListener('pointerdown', onPointerDown, true)
     window.addEventListener('pointerup', onPointerUp, true)
-    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onKeyDown, true)
 
     grab()
 
@@ -368,7 +368,7 @@ export function ChatBar({
       document.removeEventListener('focusout', onFocusOut)
       window.removeEventListener('pointerdown', onPointerDown, true)
       window.removeEventListener('pointerup', onPointerUp, true)
-      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keydown', onKeyDown, true)
     }
   }, [disabled, focusInput])
 
@@ -980,6 +980,12 @@ export function ChatBar({
       return false
     }
 
+    if (hasBlockedComposerImageUploads(attachments)) {
+      triggerHaptic('selection')
+
+      return false
+    }
+
     if (!enqueueQueuedPrompt(activeQueueSessionKey, { text: draft, attachments })) {
       return false
     }
@@ -1002,6 +1008,12 @@ export function ChatBar({
       const entry = pickEntry(queuedPrompts)
 
       if (!entry) {
+        return false
+      }
+
+      if (hasBlockedComposerImageUploads(entry.attachments)) {
+        triggerHaptic('selection')
+
         return false
       }
 
@@ -1094,6 +1106,13 @@ export function ChatBar({
   }, [activeQueueSessionKey, editingQueuedPrompt, queueEdit]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitDraft = () => {
+    if (imageUploadsBlocked) {
+      triggerHaptic('selection')
+      focusInput()
+
+      return
+    }
+
     if (queueEdit) {
       exitQueuedEdit('save')
     } else if (busy) {
@@ -1377,9 +1396,7 @@ export function ChatBar({
               <div
                 className={cn(
                   'relative z-1 flex min-h-0 w-full flex-col gap-(--composer-row-gap) overflow-hidden rounded-[inherit] px-(--composer-surface-pad-x) py-(--composer-surface-pad-y) transition-opacity duration-200 ease-out',
-                  scrolledUp
-                    ? 'opacity-30 group-hover/composer:opacity-100 group-focus-within/composer:opacity-100'
-                    : 'opacity-100'
+                  'opacity-100'
                 )}
                 data-slot="composer-fade"
               >

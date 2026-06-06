@@ -82,6 +82,7 @@ import { SidebarSessionRow } from './session-row'
 import { VirtualSessionList } from './virtual-session-list'
 
 const VIRTUALIZE_THRESHOLD = 25
+const HIDDEN_SESSION_SCROLLBAR = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 
 // Render the modifier key the user actually presses on this platform. The
 // global accelerator is bound to both Cmd+N (macOS) and Ctrl+N (everywhere
@@ -631,7 +632,10 @@ export function ChatSidebar({
         {sidebarOpen && showSessionSections && trimmedQuery && (
           <SidebarSessionsSection
             activeSessionId={activeSidebarSessionId}
-            contentClassName="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto overscroll-contain pb-1.75"
+            contentClassName={cn(
+              'flex min-h-0 flex-1 flex-col gap-px overflow-y-auto overscroll-contain pb-1.75',
+              HIDDEN_SESSION_SCROLLBAR
+            )}
             emptyState={
               <div className="grid min-h-24 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">
                 {s.noMatch(trimmedQuery)}
@@ -679,6 +683,7 @@ export function ChatSidebar({
             activeSessionId={activeSidebarSessionId}
             contentClassName={cn(
               'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-1.75',
+              HIDDEN_SESSION_SCROLLBAR,
               // Separate profile sections clearly in the ALL view; rows inside
               // each group keep their own tight gap-px rhythm.
               showAllProfiles ? 'gap-3' : 'gap-px'

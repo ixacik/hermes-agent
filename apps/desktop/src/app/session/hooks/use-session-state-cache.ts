@@ -160,10 +160,8 @@ export function useSessionStateCache({
       setSessionWorking(next.storedSessionId, next.busy)
       setSessionAttention(next.storedSessionId, next.needsInput)
 
-      // Every state update is effectively a "still alive" heartbeat for
-      // streaming events. The session-store watchdog uses this to keep the
-      // working flag alive during long-running turns and to clear it once
-      // the stream goes silent.
+      // Keep this call for stream-liveness bookkeeping. Working state is still
+      // cleared by server completion/reconcile, not by client-side silence.
       if (next.busy) {
         noteSessionActivity(next.storedSessionId)
       }

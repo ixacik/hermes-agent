@@ -6,7 +6,6 @@ import {
   StreamdownTextPrimitive,
   type SyntaxHighlighterProps
 } from '@assistant-ui/react-streamdown'
-import { code } from '@streamdown/code'
 import { type ComponentProps, memo, type ReactNode, useDeferredValue, useEffect, useMemo, useState } from 'react'
 
 import { PreviewAttachment } from '@/components/chat/preview-attachment'
@@ -24,6 +23,7 @@ import {
   mediaStreamUrl
 } from '@/lib/media'
 import { previewTargetFromMarkdownHref } from '@/lib/preview-targets'
+import { streamdownCodePlugin } from '@/lib/shiki-code'
 import { cn } from '@/lib/utils'
 
 // Math rendering plugin (KaTeX). Configured once at module scope — the
@@ -298,7 +298,7 @@ function MarkdownTextSurface({ containerClassName, containerProps }: MarkdownTex
   // Keep code parsing enabled while streaming so incomplete fenced blocks still
   // render as code cards. The expensive Shiki pass is deferred by
   // `SyntaxHighlighter` below when `isStreaming` is true.
-  const plugins = useMemo(() => ({ math: mathPlugin, code }), [])
+  const plugins = useMemo(() => ({ math: mathPlugin, code: streamdownCodePlugin }), [])
 
   const components = useMemo(
     () =>

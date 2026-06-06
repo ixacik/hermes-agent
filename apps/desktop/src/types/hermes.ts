@@ -315,11 +315,32 @@ export interface SessionMessagesResponse {
 }
 
 export interface SessionResumeResponse {
+  inflight?: null | SessionInflightTurn
   info?: SessionRuntimeInfo
   message_count: number
   messages: SessionMessage[]
   resumed: string
+  running?: boolean
   session_id: string
+  session_key?: string
+  started_at?: number
+  status?: string
+}
+
+export interface SessionInflightTurn {
+  assistant?: string
+  events?: InflightReplayEvent[]
+  interrupt_requested?: boolean
+  started_at?: number
+  streaming?: boolean
+  turn_id?: string
+  user?: string
+}
+
+export interface InflightReplayEvent {
+  payload?: import('@/lib/chat-messages').GatewayEventPayload
+  seq?: number
+  type: string
 }
 
 export interface SessionRuntimeInfo {
@@ -334,6 +355,8 @@ export interface SessionRuntimeInfo {
   provider?: string
   reasoning_effort?: string
   running?: boolean
+  status?: string
+  inflight?: null | SessionInflightTurn
   service_tier?: string
   skills?: Record<string, string[]> | string[]
   tools?: Record<string, string[]>

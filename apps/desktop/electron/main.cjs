@@ -2672,7 +2672,7 @@ async function writeComposerImage(buffer, ext = '.png') {
     .toLowerCase()
   const normalizedExt = rawExt.startsWith('.') ? rawExt : `.${rawExt}`
   const safeExt = /^\.[a-z0-9]{1,5}$/.test(normalizedExt) ? normalizedExt : '.png'
-  const dir = path.join(app.getPath('userData'), 'composer-images')
+  const dir = path.join(HERMES_HOME, 'composer-images')
   await fs.promises.mkdir(dir, { recursive: true })
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '')
   const random = crypto.randomBytes(3).toString('hex')

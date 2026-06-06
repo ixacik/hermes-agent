@@ -23,6 +23,9 @@ export type GatewayEventPayload = {
   text?: string
   rendered?: string
   status?: string
+  turn_id?: string
+  seq?: number
+  started_at?: number
   message?: string
   id?: string
   name?: string

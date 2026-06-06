@@ -70,6 +70,30 @@ describe('preprocessMarkdown', () => {
     expect(output).toContain('const value = 1;')
   })
 
+  it('keeps explicit plain text fences intact', () => {
+    const fence = '```'
+    const input = [
+      'Proxy to Honcho:',
+      '',
+      `${fence}text`,
+      'proxy_openapi_http=200 proxied_title=Honcho API proxied_version=3.0.9 proxied_paths=37',
+      fence,
+      '',
+      'Actual Hermes workspace data through OpenConcho proxy:',
+      '',
+      `${fence}text`,
+      "peers_http=200 peers_count=3 peers_sample=['plipi', 'hermes', 'hermes-verify-user']",
+      'sessions_http=200 sessions_count=11',
+      fence
+    ].join('\n')
+
+    const output = preprocessMarkdown(input)
+
+    expect(output).toContain('```text')
+    expect(output).toContain('proxy_openapi_http=200')
+    expect(output).toContain('sessions_http=200 sessions_count=11')
+  })
+
   it('keeps dangling real code fences during streaming', () => {
     const input = ['```ts', 'const value = 1;'].join('\n')
     const output = preprocessMarkdown(input)

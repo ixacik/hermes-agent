@@ -13,6 +13,15 @@ Instructions for AI coding assistants and developers working on the hermes-agent
   merge there while preserving the existing Hermes desktop UI and local
   improvements.
 
+## Fork Scope
+
+- This fork maintains the Electron desktop app only (`apps/desktop/` and
+  desktop-only supporting tests/types/docs).
+- Do not modify Hermes server, TUI, gateway, CLI, core agent, tool, plugin, or
+  shared backend Python code unless the user explicitly requests that scope.
+- Desktop fixes must work with the existing upstream server/gateway contracts;
+  add client-side compatibility layers instead of requiring a custom server fork.
+
 ## Development Environment
 
 ```bash
@@ -295,6 +304,15 @@ The dashboard embeds the real `hermes --tui` — **not** a rewrite.  See `hermes
 ### Electron Desktop Chat App (`apps/desktop/`)
 
 A **separate** chat surface from both the classic CLI and the dashboard's embedded TUI. It is an Electron + React + nanostore renderer (`@assistant-ui/react`) that talks to a `tui_gateway` backend over JSON-RPC (`requestGateway(method, params)`). It does NOT embed `hermes --tui` — it has its own composer, transcript, and slash-command pipeline. Route desktop bugs to the `hermes-desktop-app-work` skill, not `hermes-dashboard-work`.
+
+**Active chat transcript layout is intentionally not virtualized.** The desktop
+chat uses normal document flow for the live transcript so streaming content,
+tool cards, markdown reflow, and the composer clearance keep a calm, stable
+bottom edge. Do not reintroduce virtualized active chat UI, scroll-position
+correction loops, or layout-affecting loading rows during upstream merges just
+because TanStack Virtual is available. If real profiling shows DOM size becomes
+a problem, prefer a history-only or threshold-gated virtualization path that
+does not affect the currently streaming bottom section.
 
 **Slash commands in the desktop app are curated client-side, then dispatched to the backend.** The pipeline:
 

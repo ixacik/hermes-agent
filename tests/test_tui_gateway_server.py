@@ -3332,6 +3332,31 @@ def test_interrupt_clears_multiple_own_pending():
             server._answers.pop(key, None)
 
 
+def test_interrupt_reports_request_without_clearing_running():
+    calls = {"interrupt": 0}
+
+    def interrupt():
+        calls["interrupt"] += 1
+
+    server._sessions["sid"] = _session(
+        agent=types.SimpleNamespace(interrupt=interrupt),
+        inflight_turn={"assistant": "partial", "streaming": True, "turn_id": "turn-1", "user": "hello"},
+        running=True,
+    )
+
+    try:
+        resp = server.handle_request(
+            {"id": "1", "method": "session.interrupt", "params": {"session_id": "sid"}}
+        )
+    finally:
+        server._sessions.pop("sid", None)
+
+    assert calls["interrupt"] == 1
+    assert resp["result"]["status"] == "interrupt_requested"
+    assert resp["result"]["running"] is True
+    assert resp["result"]["inflight"]["interrupt_requested"] is True
+
+
 def test_clear_pending_without_sid_clears_all():
     """_clear_pending(None) is the shutdown path — must still release
     every pending prompt regardless of owning session."""
@@ -4317,12 +4342,14 @@ def test_session_active_list_reports_live_sessions(monkeypatch):
         "message_count": 1,
         "model": "model-a",
         "preview": "find docs",
+        "running": False,
         "session_key": "key-a",
         "started_at": 10.0,
         "status": "idle",
         "title": "Research",
     }
     assert rows["sid-b"]["current"] is True
+    assert rows["sid-b"]["running"] is True
     assert rows["sid-b"]["status"] == "working"
     assert rows["sid-b"]["title"] == "Implement"
     assert rows["sid-b"]["preview"] == "writing code"

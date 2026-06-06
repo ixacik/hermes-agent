@@ -413,6 +413,7 @@ export function DesktopController() {
     queryClient,
     refreshHermesConfig,
     refreshSessions,
+    requestGateway,
     updateSessionState
   })
 

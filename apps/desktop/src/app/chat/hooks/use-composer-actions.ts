@@ -3,11 +3,13 @@ import { useCallback } from 'react'
 import { requestComposerFocus, requestComposerInsert } from '@/app/chat/composer/focus'
 import { formatRefValue } from '@/components/assistant-ui/directive-text'
 import { attachmentId, contextPath, pathLabel } from '@/lib/chat-runtime'
+import { isDataImageUrl, uploadDataImageWithRemoteShell } from '@/lib/remote-image-upload'
 import {
   addComposerAttachment,
   type ComposerAttachment,
   removeComposerAttachment,
-  setComposerTerminalSelection
+  setComposerTerminalSelection,
+  updateComposerAttachment
 } from '@/store/composer'
 import { notify, notifyError } from '@/store/notifications'
 
@@ -276,35 +278,109 @@ export function useComposerActions({ activeSessionId, currentCwd, requestGateway
     [currentCwd]
   )
 
-  const attachImagePath = useCallback(async (filePath: string) => {
-    if (!filePath) {
-      return false
-    }
+  const uploadImageAttachment = useCallback(
+    async (attachment: ComposerAttachment, dataUrl: string) => {
+      if (!isDataImageUrl(dataUrl)) {
+        updateComposerAttachment(attachment.id, current => ({
+          ...current,
+          uploadError: 'Image bytes were not available for upload.',
+          uploadProgress: 0,
+          uploadStatus: 'error'
+        }))
 
-    const baseAttachment: ComposerAttachment = {
-      id: attachmentId('image', filePath),
-      kind: 'image',
-      label: pathLabel(filePath),
-      detail: filePath,
-      path: filePath
-    }
-
-    attachToMain(baseAttachment)
-
-    try {
-      const previewUrl = await window.hermesDesktop?.readFileDataUrl(filePath)
-
-      if (previewUrl) {
-        addComposerAttachment({ ...baseAttachment, previewUrl })
+        return
       }
 
-      return true
-    } catch (err) {
-      notifyError(err, 'Image preview failed')
+      try {
+        const remotePath = await uploadDataImageWithRemoteShell({
+          dataUrl,
+          label: attachment.label,
+          onProgress: progress => {
+            updateComposerAttachment(attachment.id, current => ({
+              ...current,
+              uploadProgress: progress,
+              uploadStatus: 'uploading'
+            }))
+          },
+          requestGateway
+        })
 
-      return true
-    }
-  }, [])
+        updateComposerAttachment(attachment.id, current => ({
+          ...current,
+          path: remotePath,
+          remotePath,
+          uploadError: undefined,
+          uploadProgress: 1,
+          uploadStatus: 'uploaded'
+        }))
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Image upload failed'
+
+        updateComposerAttachment(attachment.id, current => ({
+          ...current,
+          uploadError: message,
+          uploadProgress: 0,
+          uploadStatus: 'error'
+        }))
+        notifyError(err, 'Image upload failed')
+      }
+    },
+    [requestGateway]
+  )
+
+  const attachImagePath = useCallback(
+    async (filePath: string) => {
+      if (!filePath) {
+        return false
+      }
+
+      const baseAttachment: ComposerAttachment = {
+        id: attachmentId('image', filePath),
+        kind: 'image',
+        label: pathLabel(filePath),
+        detail: filePath,
+        localPath: filePath,
+        path: filePath,
+        uploadProgress: 0,
+        uploadStatus: 'uploading'
+      }
+
+      attachToMain(baseAttachment)
+
+      try {
+        const previewUrl = await window.hermesDesktop?.readFileDataUrl(filePath)
+
+        if (!previewUrl) {
+          updateComposerAttachment(baseAttachment.id, current => ({
+            ...current,
+            uploadError: 'Image bytes were not available for upload.',
+            uploadProgress: 0,
+            uploadStatus: 'error'
+          }))
+
+          return true
+        }
+
+        updateComposerAttachment(baseAttachment.id, current => ({ ...current, previewUrl }))
+        void uploadImageAttachment({ ...baseAttachment, previewUrl }, previewUrl)
+
+        return true
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Image preview failed'
+
+        updateComposerAttachment(baseAttachment.id, current => ({
+          ...current,
+          uploadError: message,
+          uploadProgress: 0,
+          uploadStatus: 'error'
+        }))
+        notifyError(err, 'Image preview failed')
+
+        return true
+      }
+    },
+    [uploadImageAttachment]
+  )
 
   const attachImageBlob = useCallback(
     async (blob: Blob) => {

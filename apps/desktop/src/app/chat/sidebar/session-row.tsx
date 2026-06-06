@@ -85,7 +85,7 @@ export function SidebarSessionRow({
     >
       <div
         className={cn(
-          'group relative grid min-h-[1.625rem] cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center rounded-md transition-colors duration-100 ease-out hover:bg-(--ui-row-hover-background) hover:transition-none',
+          'group relative grid min-h-[1.625rem] cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center rounded-lg transition-colors duration-100 ease-out hover:bg-(--ui-row-hover-background) hover:transition-none',
           isSelected && 'bg-(--ui-row-active-background)',
           isWorking && 'text-foreground',
           dragging && 'z-10 cursor-grabbing opacity-60 shadow-sm',
@@ -227,7 +227,7 @@ function SidebarRowDot({
       aria-label={isWorking ? 'Session running' : undefined}
       className={cn(
         isWorking
-          ? 'dither size-2 shrink-0 animate-pulse rounded-[1px] text-(--ui-accent)'
+          ? 'dither size-2 shrink-0 animate-pulse rounded-[1px] text-(--ui-inline-code-foreground)'
           : 'size-1 rounded-full bg-(--ui-text-quaternary) opacity-80',
         className
       )}

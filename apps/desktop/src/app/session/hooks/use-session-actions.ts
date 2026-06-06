@@ -3,9 +3,15 @@ import { useCallback, useRef } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 
 import { deleteSession, getSessionMessages, setSessionArchived } from '@/hermes'
-import { type ChatMessage, chatMessageText, preserveLocalAssistantErrors, toChatMessages } from '@/lib/chat-messages'
+import {
+  type ChatMessage,
+  chatMessageText,
+  preserveLocalAssistantErrors,
+  toChatMessages
+} from '@/lib/chat-messages'
 import { normalizePersonalityValue } from '@/lib/chat-runtime'
 import { embeddedImageUrls, textWithoutEmbeddedImages } from '@/lib/embedded-images'
+import { hydrateInflightMessages } from '@/lib/live-turn-replay'
 import { setSessionYolo } from '@/lib/yolo-session'
 import { clearComposerAttachments, clearComposerDraft } from '@/store/composer'
 import { clearQueuedPrompts } from '@/store/composer-queue'
@@ -43,7 +49,12 @@ import {
   setYoloActive
 } from '@/store/session'
 import { reportBackendContract } from '@/store/updates'
-import type { SessionCreateResponse, SessionInfo, SessionResumeResponse, UsageStats } from '@/types/hermes'
+import type {
+  SessionCreateResponse,
+  SessionInfo,
+  SessionResumeResponse,
+  UsageStats
+} from '@/types/hermes'
 
 import { NEW_CHAT_ROUTE, sessionRoute, SETTINGS_ROUTE } from '../../routes'
 import type { ClientSessionState, SidebarNavItem } from '../../types'
@@ -269,6 +280,12 @@ function applyRuntimeInfo(
   return sessionState
 }
 
+const LIVE_SESSION_STATUSES = new Set(['interrupt_requested', 'starting', 'waiting', 'working'])
+
+function isLiveSessionResponse(resumed: SessionResumeResponse): boolean {
+  return Boolean(resumed.running ?? resumed.info?.running) || LIVE_SESSION_STATUSES.has(String(resumed.status || resumed.info?.status || ''))
+}
+
 export function useSessionActions({
   activeSessionId,
   activeSessionIdRef,
@@ -430,9 +447,11 @@ export function useSessionActions({
   }, [navigate, selectedStoredSessionId])
 
   const resumeSession = useCallback(
-    async (storedSessionId: string, replaceRoute = false) => {
+    async (storedSessionId: string, replaceRoute = false, forceBackendResume = false) => {
       const requestId = resumeRequestRef.current + 1
       resumeRequestRef.current = requestId
+      let resumedRunning = false
+      let resumedAwaitingResponse = false
 
       const isCurrentResume = () =>
         resumeRequestRef.current === requestId && selectedStoredSessionIdRef.current === storedSessionId
@@ -446,7 +465,7 @@ export function useSessionActions({
       const cachedRuntimeId = runtimeIdByStoredSessionIdRef.current.get(storedSessionId)
       const cachedState = cachedRuntimeId && sessionStateByRuntimeIdRef.current.get(cachedRuntimeId)
 
-      if (cachedRuntimeId && cachedState) {
+      if (!forceBackendResume && cachedRuntimeId && cachedState) {
         setFreshDraftReady(false)
         clearNotifications()
         setSelectedStoredSessionId(storedSessionId)
@@ -569,10 +588,19 @@ export function useSessionActions({
               ? currentMessages
               : resumedMessages
 
-        const messagesForView = preserveLocalAssistantErrors(preferredMessages, currentMessages)
+        const liveRunning = isLiveSessionResponse(resumed)
+        const hydratedInflight = hydrateInflightMessages(
+          preferredMessages,
+          resumed.session_id,
+          resumed.inflight ?? resumed.info?.inflight
+        )
+        const messagesForView = preserveLocalAssistantErrors(hydratedInflight.messages, currentMessages)
+        resumedRunning = liveRunning
+        resumedAwaitingResponse = liveRunning && !hydratedInflight.sawAssistantPayload
 
         setActiveSessionId(resumed.session_id)
         activeSessionIdRef.current = resumed.session_id
+        setTurnStartedAt(liveRunning ? hydratedInflight.startedAtMs : null)
         const runtimeInfo = applyRuntimeInfo(resumed.info)
 
         patchSessionWorkspace(storedSessionId, runtimeInfo?.cwd)
@@ -583,8 +611,11 @@ export function useSessionActions({
             ...state,
             ...(runtimeInfo ?? {}),
             messages: messagesForView,
-            busy: false,
-            awaitingResponse: false
+            busy: liveRunning,
+            awaitingResponse: resumedAwaitingResponse,
+            interrupted: false,
+            sawAssistantPayload: hydratedInflight.sawAssistantPayload || state.sawAssistantPayload,
+            streamId: hydratedInflight.streamId ?? state.streamId
           }),
           storedSessionId
         )
@@ -605,9 +636,9 @@ export function useSessionActions({
         notifyError(err, 'Resume failed')
       } finally {
         if (isCurrentResume()) {
-          busyRef.current = false
-          setBusy(false)
-          setAwaitingResponse(false)
+          busyRef.current = resumedRunning
+          setBusy(resumedRunning)
+          setAwaitingResponse(resumedAwaitingResponse)
         }
       }
     },

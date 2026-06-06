@@ -51,7 +51,7 @@ import { extractDroppedFiles, HERMES_PATHS_MIME } from '@/app/chat/hooks/use-com
 import { ClarifyTool } from '@/components/assistant-ui/clarify-tool'
 import { DirectiveContent, hermesDirectiveFormatter } from '@/components/assistant-ui/directive-text'
 import { MarkdownText, MarkdownTextContent } from '@/components/assistant-ui/markdown-text'
-import { VirtualizedThread } from '@/components/assistant-ui/thread-virtualizer'
+import { FlowThread } from '@/components/assistant-ui/thread-flow'
 import { HoistedTodoPanel, todosFromMessageContent } from '@/components/assistant-ui/todo-tool'
 import { ToolFallback, ToolGroupSlot } from '@/components/assistant-ui/tool-fallback'
 import { TooltipIconButton } from '@/components/assistant-ui/tooltip-icon-button'
@@ -82,6 +82,7 @@ import { useEnterAnimation } from '@/lib/use-enter-animation'
 import { cn } from '@/lib/utils'
 import { playSpeechText, stopVoicePlayback } from '@/lib/voice-playback'
 import { notifyError } from '@/store/notifications'
+import { $turnStartedAt } from '@/store/session'
 import { $voicePlayback } from '@/store/voice-playback'
 
 type ThreadLoadingState = 'response' | 'session'
@@ -141,6 +142,15 @@ export const Thread: FC<{
   sessionId = null,
   sessionKey
 }) => {
+  const turnRunning = useAuiState(
+    s =>
+      s.thread.isRunning ||
+      s.thread.messages.some(message => {
+        const status = (message as { status?: { type?: unknown } }).status
+
+        return status?.type === 'running'
+      })
+  )
   const messageComponents = useMemo(
     () => ({
       AssistantMessage: () => <AssistantMessage onBranchInNewChat={onBranchInNewChat} />,
@@ -163,11 +173,11 @@ export const Thread: FC<{
   return (
     <GeneratedImageProvider>
       <div className="relative grid h-full min-h-0 max-w-full grid-rows-[minmax(0,1fr)] overflow-hidden bg-transparent contain-[layout_paint]">
-        <VirtualizedThread
+        <FlowThread
           clampToComposer={clampToComposer}
           components={messageComponents}
           emptyPlaceholder={emptyPlaceholder}
-          loadingIndicator={loading === 'response' ? <ResponseLoadingIndicator /> : null}
+          loadingIndicator={turnRunning || loading === 'response' ? <ResponseLoadingIndicator /> : null}
           sessionKey={sessionKey}
         />
         {loading === 'session' && <CenteredThreadSpinner />}
@@ -283,13 +293,50 @@ const StatusRow: FC<{ children: ReactNode; label: string } & React.ComponentProp
   </div>
 )
 
+const WORKING_MESSAGES = [
+  'Working...',
+  'Reading the room...',
+  'Finding the thread...',
+  'Checking the edges...',
+  'Following the trail...',
+  'Tuning the answer...'
+] as const
+
 const ResponseLoadingIndicator: FC = () => {
-  const elapsed = useElapsedSeconds()
+  const turnStartedAt = useStore($turnStartedAt)
+  const timerKey = turnStartedAt ? `turn:${turnStartedAt}` : undefined
+  const elapsed = useElapsedSeconds(true, timerKey, turnStartedAt ?? undefined)
+  const [messageIndex, setMessageIndex] = useState(0)
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setMessageIndex(index => (index + 1) % WORKING_MESSAGES.length)
+    }, 2_200)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
+
+  const message = WORKING_MESSAGES[messageIndex]
 
   return (
-    <StatusRow data-slot="aui_response-loading" label="Hermes is loading a response">
-      <span aria-hidden="true" className="dither inline-block size-3 rounded-[2px] text-midground animate-pulse" />
-      <ActivityTimerText seconds={elapsed} />
+    <StatusRow
+      className="gap-2.5 pl-[var(--message-text-indent)] text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-(--ui-text-secondary)"
+      data-slot="aui_response-loading"
+      label="Hermes is loading a response"
+    >
+      <span aria-hidden="true" className="dither inline-block size-3 shrink-0 animate-pulse rounded-[2px] text-(--ui-inline-code-foreground)" />
+      <span className="flex min-w-0 items-baseline gap-2">
+        <span
+          aria-live="polite"
+          className="working-message-cycle inline-block"
+          key={message}
+        >
+          {message}
+        </span>
+        <span className="text-(--ui-text-tertiary)">(</span>
+        <ActivityTimerText className="text-[length:var(--conversation-text-font-size)] text-(--ui-text-tertiary)" seconds={elapsed} />
+        <span className="text-(--ui-text-tertiary)">{' • esc to interrupt)'}</span>
+      </span>
     </StatusRow>
   )
 }

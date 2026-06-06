@@ -10,7 +10,7 @@ interface RouteResumeOptions {
   freshDraftReady: boolean
   gatewayState: string | undefined
   locationPathname: string
-  resumeSession: (sessionId: string, focus: boolean) => Promise<unknown>
+  resumeSession: (sessionId: string, focus: boolean, forceBackendResume?: boolean) => Promise<unknown>
   routedSessionId: string | null
   runtimeIdByStoredSessionIdRef: MutableRefObject<Map<string, string>>
   selectedStoredSessionId: string | null
@@ -57,13 +57,15 @@ export function useRouteResume({
 }: RouteResumeOptions) {
   const lastPathnameRef = useRef<string | null>(null)
   const wasGatewayOpenRef = useRef(false)
+  const sawGatewayStateRef = useRef(false)
 
   useEffect(() => {
     const gatewayOpen = gatewayState === 'open'
     const pathnameChanged = lastPathnameRef.current !== locationPathname
-    const gatewayBecameOpen = !wasGatewayOpenRef.current && gatewayOpen
+    const gatewayBecameOpen = sawGatewayStateRef.current && !wasGatewayOpenRef.current && gatewayOpen
     lastPathnameRef.current = locationPathname
     wasGatewayOpenRef.current = gatewayOpen
+    sawGatewayStateRef.current = true
 
     if (currentView !== 'chat' || !gatewayOpen) {
       return
@@ -82,8 +84,8 @@ export function useRouteResume({
       // before the pathname updates from /:sid -> /.
       const shouldResume = pathnameChanged || gatewayBecameOpen
 
-      if (!alreadyActive && shouldResume && !creatingSessionRef.current) {
-        void resumeSession(routedSessionId, true)
+      if (shouldResume && (!alreadyActive || gatewayBecameOpen) && !creatingSessionRef.current) {
+        void resumeSession(routedSessionId, true, gatewayBecameOpen)
       }
 
       return

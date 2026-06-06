@@ -1791,6 +1791,8 @@ def _session_info(agent, session: dict | None = None) -> dict:
         "branch": _git_branch_for_cwd(cwd),
         "personality": str(personality or ""),
         "running": bool((session or {}).get("running")),
+        "status": _session_live_status("", session or {}) if session is not None else "idle",
+        "inflight": _inflight_snapshot(session or {}) if session is not None else None,
         "desktop_contract": DESKTOP_BACKEND_CONTRACT,
         "version": "",
         "release_date": "",
@@ -2585,11 +2587,12 @@ def _init_session(sid: str, key: str, agent, history: list, cols: int = 80):
             "session_key": key,
             "history": history,
             "history_lock": threading.Lock(),
-            "history_version": 0,
-            "inflight_turn": None,
-            "created_at": now,
-            "last_active": now,
-            "running": False,
+        "history_version": 0,
+        "inflight_turn": None,
+        "interrupt_requested": False,
+        "created_at": now,
+        "last_active": now,
+        "running": False,
             "attached_images": [],
             "image_counter": 0,
             "cwd": _completion_cwd(),
@@ -2933,10 +2936,13 @@ def _inflight_text(value: Any) -> str:
 
 def _start_inflight_turn(session: dict, text: Any) -> None:
     now = time.time()
+    session["interrupt_requested"] = False
     session["inflight_turn"] = {
         "assistant": "",
+        "interrupt_requested": False,
         "started_at": now,
         "streaming": True,
+        "turn_id": uuid.uuid4().hex,
         "updated_at": now,
         "user": _inflight_text(text),
     }
@@ -2957,6 +2963,7 @@ def _append_inflight_delta(session: dict, delta: Any) -> None:
 
 def _clear_inflight_turn(session: dict) -> None:
     session["inflight_turn"] = None
+    session["interrupt_requested"] = False
 
 
 def _inflight_snapshot(session: dict) -> dict | None:
@@ -2970,7 +2977,9 @@ def _inflight_snapshot(session: dict) -> dict | None:
         return None
     return {
         "assistant": assistant,
+        "interrupt_requested": bool(turn.get("interrupt_requested")),
         "streaming": streaming,
+        "turn_id": str(turn.get("turn_id") or ""),
         "user": user,
     }
 
@@ -3023,6 +3032,7 @@ def _(rid, params: dict) -> dict:
             "image_counter": 0,
             "cwd": resolved_cwd,
             "inflight_turn": None,
+            "interrupt_requested": False,
             "last_active": now,
             "pending_title": title or None,
             "profile_home": str(profile_home) if profile_home is not None else None,
@@ -3330,6 +3340,8 @@ def _session_pending_kind(sid: str) -> str:
 
 
 def _session_live_status(sid: str, session: dict) -> str:
+    if session.get("running") and session.get("interrupt_requested"):
+        return "interrupt_requested"
     if _session_pending_kind(sid):
         return "waiting"
     ready = session.get("agent_ready")
@@ -3370,18 +3382,22 @@ def _session_live_item(sid: str, session: dict, current_sid: str = "") -> dict:
         preview = inflight.get("assistant") or inflight.get("user") or preview
         preview = " ".join(str(preview).split())[:160]
     now = time.time()
-    return {
+    row = {
         "current": sid == current_sid,
         "id": sid,
         "last_active": float(session.get("last_active") or session.get("created_at") or now),
         "message_count": len(history),
         "model": str(getattr(agent, "model", "") or _resolve_model()),
         "preview": preview,
+        "running": bool(session.get("running")),
         "session_key": key,
         "started_at": float(session.get("created_at") or now),
         "status": status,
         "title": _session_live_title(session, key),
     }
+    if inflight:
+        row["inflight"] = inflight
+    return row
 
 
 def _find_live_session_by_key(session_key: str) -> tuple[str, dict] | None:
@@ -3944,6 +3960,14 @@ def _(rid, params: dict) -> dict:
     session, err = _sess(params, rid)
     if err:
         return err
+    with session["history_lock"]:
+        was_running = bool(session.get("running"))
+        if was_running:
+            session["interrupt_requested"] = True
+            turn = session.get("inflight_turn")
+            if isinstance(turn, dict):
+                turn["interrupt_requested"] = True
+                turn["updated_at"] = time.time()
     if hasattr(session["agent"], "interrupt"):
         session["agent"].interrupt()
     # Scope the pending-prompt release to THIS session.  A global
@@ -3957,7 +3981,17 @@ def _(rid, params: dict) -> dict:
         resolve_gateway_approval(session["session_key"], "deny", resolve_all=True)
     except Exception:
         pass
-    return _ok(rid, {"status": "interrupted"})
+    info = _session_info(session.get("agent"), session)
+    _emit("session.info", params.get("session_id", ""), info)
+    return _ok(
+        rid,
+        {
+            "inflight": _inflight_snapshot(session),
+            "running": was_running,
+            "session_key": session.get("session_key") or params.get("session_id", ""),
+            "status": "interrupt_requested" if was_running else "idle",
+        },
+    )
 
 
 # ── Delegation: subagent tree observability + controls ───────────────
@@ -4255,8 +4289,10 @@ def _(rid, params: dict) -> dict:
                 except Exception as exc:
                     print(f"[tui_gateway] prompt.submit: replace_messages failed: {exc}", file=sys.stderr)
         session["running"] = True
+        session["interrupt_requested"] = False
         session["last_active"] = time.time()
         _start_inflight_turn(session, text)
+        turn_id = str((session.get("inflight_turn") or {}).get("turn_id") or "")
 
     # Persist the DB row lazily, now that the user has actually sent a message.
     _ensure_session_db_row(session)
@@ -4281,7 +4317,16 @@ def _(rid, params: dict) -> dict:
         _run_prompt_submit(rid, sid, session, text)
 
     threading.Thread(target=run_after_agent_ready, daemon=True).start()
-    return _ok(rid, {"status": "streaming"})
+    return _ok(
+        rid,
+        {
+            "inflight": _inflight_snapshot(session),
+            "running": True,
+            "session_key": session.get("session_key") or sid,
+            "status": "streaming",
+            "turn_id": turn_id,
+        },
+    )
 
 
 def _notification_event_belongs_elsewhere(session: dict, evt: dict) -> bool:
@@ -4484,7 +4529,8 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
         if not isinstance(session.get("inflight_turn"), dict):
             _start_inflight_turn(session, text)
     agent = session["agent"]
-    _emit("message.start", sid)
+    turn_id = str((session.get("inflight_turn") or {}).get("turn_id") or "")
+    _emit("message.start", sid, {"running": True, "status": "running", "turn_id": turn_id})
 
     def run():
         approval_token = None
@@ -4606,7 +4652,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
             def _stream(delta):
                 with session["history_lock"]:
                     _append_inflight_delta(session, delta)
-                payload = {"text": delta}
+                payload = {"text": delta, "turn_id": turn_id}
                 if streamer and (r := streamer.feed(delta)) is not None:
                     payload["rendered"] = r
                 _emit("message.delta", sid, payload)
@@ -4686,7 +4732,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                 raw = str(result)
                 status = "complete"
 
-            payload = {"text": raw, "usage": _get_usage(agent), "status": status}
+            payload = {"text": raw, "turn_id": turn_id, "usage": _get_usage(agent), "status": status}
             if last_reasoning:
                 payload["reasoning"] = last_reasoning
             if status_note:

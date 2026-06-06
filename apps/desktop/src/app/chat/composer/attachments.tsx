@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react'
 
 import { Codicon } from '@/components/ui/codicon'
 import { Tip } from '@/components/ui/tooltip'
-import { FileText, FolderOpen, ImageIcon, Link, Terminal } from '@/lib/icons'
+import { AlertCircle, FileText, FolderOpen, ImageIcon, Link, Terminal } from '@/lib/icons'
 import { normalizeOrLocalPreviewTarget } from '@/lib/local-preview'
 import type { ComposerAttachment } from '@/store/composer'
 import { notifyError } from '@/store/notifications'
@@ -31,12 +31,20 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
   const canPreview = attachment.kind !== 'folder' && attachment.kind !== 'terminal'
   const detail = attachment.detail && attachment.detail !== attachment.label ? attachment.detail : undefined
 
+  const tipLabel =
+    attachment.uploadStatus === 'error'
+      ? attachment.uploadError || 'Image upload failed'
+      : attachment.uploadStatus === 'uploading'
+        ? 'Uploading image to server'
+        : attachment.path || attachment.detail || attachment.label
+
   async function openPreview() {
     if (!canPreview) {
       return
     }
 
     const rawTarget =
+      attachment.localPath ||
       attachment.path ||
       attachment.detail ||
       attachment.refText?.replace(/^@(file|image|url):/, '') ||
@@ -63,7 +71,7 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
   }
 
   return (
-    <Tip label={attachment.path || attachment.detail || attachment.label}>
+    <Tip label={tipLabel}>
       <div className="group/attachment relative min-w-0 shrink-0">
         <button
           aria-label={canPreview ? `Preview ${attachment.label}` : attachment.label}
@@ -73,15 +81,19 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
           type="button"
         >
           {attachment.previewUrl && attachment.kind === 'image' ? (
-            <img
-              alt={attachment.label}
-              className="size-8 shrink-0 border border-border object-cover"
-              draggable={false}
-              src={attachment.previewUrl}
-            />
+            <span className="relative size-8 shrink-0">
+              <img
+                alt={attachment.label}
+                className="size-8 border border-border object-cover"
+                draggable={false}
+                src={attachment.previewUrl}
+              />
+              <ImageUploadBadge attachment={attachment} />
+            </span>
           ) : (
-            <span className="grid size-8 shrink-0 place-items-center border border-border bg-muted text-muted-foreground">
+            <span className="relative grid size-8 shrink-0 place-items-center border border-border bg-muted text-muted-foreground">
               <Icon className="size-3.5" />
+              <ImageUploadBadge attachment={attachment} />
             </span>
           )}
           <span className="min-w-0">
@@ -107,5 +119,54 @@ function AttachmentPill({ attachment, onRemove }: { attachment: ComposerAttachme
         )}
       </div>
     </Tip>
+  )
+}
+
+function ImageUploadBadge({ attachment }: { attachment: ComposerAttachment }) {
+  if (attachment.kind !== 'image') {
+    return null
+  }
+
+  if (attachment.uploadStatus === 'error') {
+    return (
+      <span className="absolute -bottom-1 -right-1 grid size-4 place-items-center rounded-full border border-background bg-destructive text-destructive-foreground shadow-sm">
+        <AlertCircle className="size-3" />
+      </span>
+    )
+  }
+
+  if (attachment.uploadStatus !== 'uploading') {
+    return null
+  }
+
+  const progress = Math.max(0.04, Math.min(0.98, attachment.uploadProgress ?? 0.04))
+  const radius = 5.5
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = circumference * (1 - progress)
+
+  return (
+    <span className="absolute -bottom-1 -right-1 grid size-4 place-items-center rounded-full border border-background bg-background shadow-sm">
+      <svg aria-hidden className="size-3.5 -rotate-90" viewBox="0 0 16 16">
+        <circle
+          className="stroke-muted"
+          cx="8"
+          cy="8"
+          fill="none"
+          r={radius}
+          strokeWidth="2.4"
+        />
+        <circle
+          className="stroke-(--dt-ring)"
+          cx="8"
+          cy="8"
+          fill="none"
+          r={radius}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          strokeWidth="2.4"
+        />
+      </svg>
+    </span>
   )
 }

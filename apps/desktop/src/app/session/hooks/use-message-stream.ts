@@ -13,8 +13,9 @@ import {
   renderMediaTags,
   upsertToolPart
 } from '@/lib/chat-messages'
-import { coerceGatewayText, coerceThinkingText, normalizePersonalityValue } from '@/lib/chat-runtime'
+import { coerceGatewayText, coerceThinkingText, INTERRUPTED_MARKER, normalizePersonalityValue } from '@/lib/chat-runtime'
 import { triggerHaptic } from '@/lib/haptics'
+import { hydrateInflightMessages, inflightStartedAtMs } from '@/lib/live-turn-replay'
 import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
 import { setClarifyRequest } from '@/store/clarify'
 import { notify } from '@/store/notifications'
@@ -30,12 +31,14 @@ import {
   setCurrentReasoningEffort,
   setCurrentServiceTier,
   setCurrentUsage,
+  setSessions,
+  setWorkingSessionIds,
   setTurnStartedAt,
   setYoloActive
 } from '@/store/session'
 import { clearSessionSubagents, pruneDelegateFallbackSubagents, upsertSubagent } from '@/store/subagents'
 import { recordToolDiff } from '@/store/tool-diffs'
-import type { RpcEvent } from '@/types/hermes'
+import type { RpcEvent, SessionInfo, SessionInflightTurn } from '@/types/hermes'
 
 import type { ClientSessionState } from '../../types'
 
@@ -49,6 +52,7 @@ interface MessageStreamOptions {
   queryClient: QueryClient
   refreshHermesConfig: () => Promise<void>
   refreshSessions: () => Promise<void>
+  requestGateway: <T>(method: string, params?: Record<string, unknown>) => Promise<T>
   updateSessionState: (
     sessionId: string,
     updater: (state: ClientSessionState) => ClientSessionState,
@@ -70,6 +74,72 @@ interface QueuedStreamDeltas {
 // smoothness win on long messages with big trailing paragraphs; see
 // `scripts/profile-typing-lag.md` for the measurement work behind this.
 const STREAM_DELTA_FLUSH_MS = 33
+const LIVE_SESSION_STATUSES = new Set(['interrupt_requested', 'starting', 'waiting', 'working'])
+
+interface ActiveSessionRow {
+  current?: boolean
+  cwd?: null | string
+  inflight?: null | SessionInflightTurn
+  id?: string
+  last_active?: number
+  message_count?: number
+  model?: string
+  preview?: string
+  profile?: string
+  running?: boolean
+  session_key?: string
+  source?: string
+  started_at?: number
+  status?: string
+  title?: string
+}
+
+interface ActiveSessionListResponse {
+  sessions?: ActiveSessionRow[]
+}
+
+function isLiveSessionStatus(status: unknown): boolean {
+  return typeof status === 'string' && LIVE_SESSION_STATUSES.has(status)
+}
+
+function activeRowStoredId(row: ActiveSessionRow): string {
+  return String(row.session_key || row.id || '').trim()
+}
+
+function activeRowIsLive(row: ActiveSessionRow): boolean {
+  return Boolean(row.running || isLiveSessionStatus(row.status))
+}
+
+function activeRowToSessionInfo(row: ActiveSessionRow): null | SessionInfo {
+  const id = activeRowStoredId(row)
+
+  if (!id || !activeRowIsLive(row)) {
+    return null
+  }
+
+  const now = Date.now() / 1000
+  const lastActive = Number(row.last_active || row.started_at || now)
+  const startedAt = Number(row.started_at || lastActive || now)
+
+  return {
+    archived: false,
+    cwd: row.cwd ?? null,
+    ended_at: null,
+    id,
+    input_tokens: 0,
+    is_active: Boolean(row.current),
+    last_active: lastActive,
+    message_count: Number(row.message_count || 0),
+    model: row.model || null,
+    output_tokens: 0,
+    preview: row.preview || null,
+    source: row.source || 'tui',
+    started_at: startedAt,
+    title: row.title || row.preview || null,
+    tool_call_count: 0,
+    ...(row.profile ? { profile: row.profile } : {})
+  }
+}
 
 // Gateway/provider failures sometimes arrive as message.complete text instead
 // of an explicit error event. Treat matches as inline assistant errors so they
@@ -189,6 +259,7 @@ export function useMessageStream({
   queryClient,
   refreshHermesConfig,
   refreshSessions,
+  requestGateway,
   updateSessionState
 }: MessageStreamOptions) {
   // Patch the in-flight assistant message (or seed it). Centralises the
@@ -432,20 +503,19 @@ export function useMessageStream({
   )
 
   const completeAssistantMessage = useCallback(
-    (sessionId: string, text: string) => {
+    (sessionId: string, text: string, status?: string) => {
       let shouldHydrate = false
 
       const completedState = updateSessionState(sessionId, state => {
-        // Late completion from an already-cancelled turn: cancelRun has
-        // already finalized the bubble and added the [interrupted] marker;
-        // re-running the dedupe below would erase that marker and replace
-        // the partial with the (just-cancelled) full text.
-        if (state.interrupted) {
-          return state
-        }
-
         const streamId = state.streamId
-        const finalText = renderMediaTags(text).trim()
+        const interrupted = status === 'interrupted'
+        const textWithStatus =
+          interrupted && !text.includes(INTERRUPTED_MARKER.trim())
+            ? text.trim()
+              ? `${text}${INTERRUPTED_MARKER}`
+              : INTERRUPTED_MARKER.trim()
+            : text
+        const finalText = renderMediaTags(textWithStatus).trim()
         const completionError = completionErrorText(finalText)
         const normalize = (value: string) => value.replace(/\s+/g, ' ').trim()
         const dedupeReference = normalize(finalText)
@@ -529,7 +599,8 @@ export function useMessageStream({
           streamId: null,
           pendingBranchGroup: null,
           awaitingResponse: false,
-          busy: false,
+          busy: state.busy,
+          interrupted: false,
           needsInput: false
         }
       })
@@ -603,6 +674,76 @@ export function useMessageStream({
       const isActiveEvent = !!sessionId && sessionId === activeSessionIdRef.current
 
       if (event.type === 'gateway.ready') {
+        void refreshSessions().catch(() => undefined)
+        void requestGateway<ActiveSessionListResponse>('session.active_list', {
+          current_session_id: activeSessionIdRef.current || ''
+        })
+          .then(result => {
+            const activeRuntimeId = activeSessionIdRef.current
+            const activeLiveRow = (result.sessions ?? []).find(row => row.id === activeRuntimeId && activeRowIsLive(row))
+            const liveSidebarRows = (result.sessions ?? [])
+              .map(activeRowToSessionInfo)
+              .filter((row): row is SessionInfo => row !== null)
+
+            if (liveSidebarRows.length > 0) {
+              setSessions(prev => {
+                const liveIds = new Set(liveSidebarRows.map(row => row.id))
+
+                return [...liveSidebarRows, ...prev.filter(row => !liveIds.has(row.id))]
+              })
+            }
+            setWorkingSessionIds(liveSidebarRows.map(row => row.id))
+
+            if (activeRuntimeId && !activeLiveRow) {
+              setTurnStartedAt(null)
+              updateSessionState(activeRuntimeId, state => ({
+                ...state,
+                awaitingResponse: false,
+                busy: false,
+                interrupted: false,
+                pendingBranchGroup: null,
+                streamId: null
+              }))
+            }
+
+            for (const row of result.sessions ?? []) {
+              if (!row.id) {
+                continue
+              }
+
+              const busy = Boolean(row.running || isLiveSessionStatus(row.status))
+              const hydrated = row.inflight
+                ? hydrateInflightMessages([], row.id, row.inflight)
+                : null
+
+              if (busy && row.id === activeSessionIdRef.current) {
+                setTurnStartedAt(hydrated?.startedAtMs ?? inflightStartedAtMs(row.inflight) ?? null)
+              }
+
+              updateSessionState(
+                row.id,
+                state => {
+                  const inflight = row.inflight
+                    ? hydrateInflightMessages(state.messages, row.id!, row.inflight)
+                    : null
+
+                  return {
+                    ...state,
+                    ...(inflight ? { messages: inflight.messages } : {}),
+                    busy,
+                    awaitingResponse: busy ? state.awaitingResponse && !inflight?.sawAssistantPayload : false,
+                    interrupted: false,
+                    needsInput: row.status === 'waiting',
+                    sawAssistantPayload: Boolean(inflight?.sawAssistantPayload || state.sawAssistantPayload),
+                    streamId: inflight?.streamId ?? state.streamId
+                  }
+                },
+                row.session_key ?? null
+              )
+            }
+          })
+          .catch(() => undefined)
+
         return
       } else if (event.type === 'session.info') {
         // Apply session-scoped fields when the event targets the active
@@ -660,35 +801,33 @@ export function useMessageStream({
           if (typeof payload?.yolo === 'boolean') {
             setYoloActive(payload.yolo)
           }
+        }
 
-          if (runningChanged && sessionId) {
-            updateSessionState(sessionId, state => {
-              const busy = Boolean(payload!.running)
+        if (runningChanged && sessionId) {
+          updateSessionState(sessionId, state => {
+            const busy = Boolean(payload!.running)
 
-              if (state.busy === busy && (busy || !state.awaitingResponse)) {
-                return state
-              }
+            if (state.busy === busy && (busy || !state.awaitingResponse)) {
+              return state
+            }
 
-              if (busy) {
-                return {
-                  ...state,
-                  busy
-                }
-              }
-
-              if (state.awaitingResponse && !state.sawAssistantPayload) {
-                return state
-              }
-
+            if (busy) {
               return {
                 ...state,
-                awaitingResponse: false,
                 busy,
-                pendingBranchGroup: null,
-                streamId: null
+                interrupted: false
               }
-            })
-          }
+            }
+
+            return {
+              ...state,
+              awaitingResponse: false,
+              busy,
+              interrupted: false,
+              pendingBranchGroup: null,
+              streamId: null
+            }
+          })
         }
 
         if (payload?.usage && (!explicitSid || isActiveEvent)) {
@@ -728,7 +867,11 @@ export function useMessageStream({
         }))
 
         if (isActiveEvent) {
-          setTurnStartedAt(Date.now())
+          setTurnStartedAt(
+            typeof payload?.started_at === 'number' && Number.isFinite(payload.started_at)
+              ? Math.floor(payload.started_at * 1000)
+              : Date.now()
+          )
         }
       } else if (event.type === 'message.delta') {
         if (sessionId) {
@@ -765,7 +908,7 @@ export function useMessageStream({
         }
 
         const finalText = coerceGatewayText(payload?.text) || coerceGatewayText(payload?.rendered)
-        completeAssistantMessage(sessionId, finalText)
+        completeAssistantMessage(sessionId, finalText, payload?.status)
 
         if (isActiveEvent) {
           setTurnStartedAt(null)
@@ -925,6 +1068,8 @@ export function useMessageStream({
       flushQueuedDeltas,
       queryClient,
       refreshHermesConfig,
+      refreshSessions,
+      requestGateway,
       updateSessionState,
       upsertToolCall
     ]

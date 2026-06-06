@@ -10,7 +10,12 @@ export interface ComposerAttachment {
   refText?: string
   previewUrl?: string
   path?: string
+  localPath?: string
+  remotePath?: string
   attachedSessionId?: string
+  uploadError?: string
+  uploadProgress?: number
+  uploadStatus?: 'idle' | 'uploading' | 'uploaded' | 'error'
 }
 
 export const $composerDraft = atom('')
@@ -61,6 +66,30 @@ export function addComposerAttachment(attachment: ComposerAttachment) {
   }
 }
 
+export function updateComposerAttachment(
+  id: string,
+  updater: (attachment: ComposerAttachment) => ComposerAttachment
+): boolean {
+  const current = $composerAttachments.get()
+  let updated = false
+
+  const next = current.map(attachment => {
+    if (attachment.id !== id) {
+      return attachment
+    }
+
+    updated = true
+
+    return updater(attachment)
+  })
+
+  if (updated) {
+    $composerAttachments.set(next)
+  }
+
+  return updated
+}
+
 export function removeComposerAttachment(id: string): ComposerAttachment | null {
   const current = $composerAttachments.get()
   const removed = current.find(attachment => attachment.id === id) || null
@@ -71,6 +100,14 @@ export function removeComposerAttachment(id: string): ComposerAttachment | null 
 
 export function clearComposerAttachments() {
   $composerAttachments.set([])
+}
+
+export function hasBlockedComposerImageUploads(attachments: ComposerAttachment[]): boolean {
+  return attachments.some(
+    attachment =>
+      attachment.kind === 'image' &&
+      (attachment.uploadStatus === 'uploading' || attachment.uploadStatus === 'error')
+  )
 }
 
 const TERMINAL_REF_RE = /@terminal:(`[^`\n]+`|"[^"\n]+"|'[^'\n]+'|\S+)/g

@@ -1,5 +1,5 @@
 const VALID_LANGUAGE_RE = /^[a-z0-9][a-z0-9+#-]*$/i
-const NON_CODE_FENCE_LANGUAGES = new Set(['', 'text', 'plain', 'plaintext', 'md', 'markdown'])
+const NON_CODE_FENCE_LANGUAGES = new Set(['', 'md', 'markdown'])
 
 const COMMON_CODE_LANGUAGES = new Set([
   'bash',

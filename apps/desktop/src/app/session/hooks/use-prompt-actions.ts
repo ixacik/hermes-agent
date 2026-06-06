@@ -2,10 +2,9 @@ import type { AppendMessage, ThreadMessage } from '@assistant-ui/react'
 import { type MutableRefObject, useCallback } from 'react'
 
 import { getProfiles, transcribeAudio } from '@/hermes'
-import { appendTextPart, branchGroupForUser, type ChatMessage, chatMessageText, textPart } from '@/lib/chat-messages'
+import { branchGroupForUser, type ChatMessage, chatMessageText, textPart } from '@/lib/chat-messages'
 import {
   attachmentDisplayText,
-  INTERRUPTED_MARKER,
   parseCommandDispatch,
   parseSlashCommand,
   pathLabel,
@@ -20,6 +19,7 @@ import {
 import { triggerHaptic } from '@/lib/haptics'
 import { setMutableRef } from '@/lib/mutable-ref'
 import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
+import { isDataImageUrl, uploadDataImageWithRemoteShell } from '@/lib/remote-image-upload'
 import { setSessionYolo } from '@/lib/yolo-session'
 import {
   $composerAttachments,
@@ -93,6 +93,46 @@ interface PromptActionsOptions {
 interface SubmitTextOptions {
   attachments?: ComposerAttachment[]
   fromQueue?: boolean
+}
+
+interface SessionInterruptResponse {
+  running?: boolean
+  status?: string
+}
+
+function imageAttachmentPath(attachment: ComposerAttachment): string {
+  const candidates = [
+    attachment.remotePath,
+    attachment.uploadStatus === 'uploaded' ? attachment.path : undefined,
+    attachment.detail,
+    attachment.localPath,
+    attachment.path,
+    attachment.refText?.replace(/^@image:/, '')
+  ]
+
+  for (const candidate of candidates) {
+    const value = candidate?.trim()
+
+    if (!value) {
+      continue
+    }
+
+    const head = value[0]
+    const tail = value[value.length - 1]
+
+    const quoted =
+      (head === '`' && tail === '`') || (head === '"' && tail === '"') || (head === "'" && tail === "'")
+
+    return quoted ? value.slice(1, -1) : value
+  }
+
+  return ''
+}
+
+function isSessionBusyError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+
+  return /\bsession busy\b/i.test(message)
 }
 
 function renderCommandsCatalog(catalog: CommandsCatalogLike): string {
@@ -183,24 +223,64 @@ export function usePromptActions({
       options: { updateComposerAttachments?: boolean } = {}
     ) => {
       const updateComposerAttachments = options.updateComposerAttachments ?? true
-      const images = attachments.filter(attachment => attachment.kind === 'image' && attachment.path)
 
-      for (const attachment of images) {
+      const images = attachments
+        .filter(attachment => attachment.kind === 'image')
+        .map(attachment => ({
+          attachment,
+          dataUrl: attachment.previewUrl,
+          path: attachment.remotePath || imageAttachmentPath(attachment)
+        }))
+        .filter(item => item.path || isDataImageUrl(item.dataUrl))
+
+      for (const { attachment, dataUrl, path } of images) {
         if (attachment.attachedSessionId === sessionId) {
           continue
         }
 
-        const result = await requestGateway<ImageAttachResponse>('image.attach', {
-          session_id: sessionId,
-          path: attachment.path
-        })
-
-        if (!result.attached) {
-          const label = attachment.label || (attachment.path ? pathLabel(attachment.path) : 'image')
-          throw new Error(result.message || `Could not attach ${label}`)
+        if (attachment.uploadStatus === 'uploading') {
+          throw new Error(`${attachment.label || 'Image'} is still uploading`)
         }
 
-        const attachedPath = result.path || attachment.path
+        if (attachment.uploadStatus === 'error') {
+          throw new Error(attachment.uploadError || `Could not upload ${attachment.label || 'image'}`)
+        }
+
+        let result: ImageAttachResponse | null = null
+        let attachPath = attachment.remotePath || path
+        let uploadDataUrl = dataUrl
+
+        if (!attachment.remotePath) {
+          if (!isDataImageUrl(uploadDataUrl) && path && window.hermesDesktop?.readFileDataUrl) {
+            try {
+              uploadDataUrl = await window.hermesDesktop.readFileDataUrl(path)
+            } catch {
+              uploadDataUrl = dataUrl
+            }
+          }
+
+          if (isDataImageUrl(uploadDataUrl)) {
+            attachPath = await uploadDataImageWithRemoteShell({
+              dataUrl: uploadDataUrl,
+              label: attachment.label,
+              requestGateway
+            })
+          }
+        }
+
+        if (attachPath) {
+          result = await requestGateway<ImageAttachResponse>('image.attach', {
+            session_id: sessionId,
+            path: attachPath
+          })
+        }
+
+        if (!result?.attached) {
+          const label = attachment.label || pathLabel(path)
+          throw new Error(result?.message || `Could not attach ${label}`)
+        }
+
+        const attachedPath = result.path || attachPath || path
 
         if (updateComposerAttachments) {
           addComposerAttachment({
@@ -208,7 +288,11 @@ export function usePromptActions({
             id: attachment.id,
             label: attachedPath ? pathLabel(attachedPath) : attachment.label,
             path: attachedPath,
-            attachedSessionId: sessionId
+            remotePath: attachedPath,
+            attachedSessionId: sessionId,
+            uploadError: undefined,
+            uploadProgress: 1,
+            uploadStatus: 'uploaded'
           })
         }
       }
@@ -341,6 +425,22 @@ export function usePromptActions({
         return true
       } catch (err) {
         const message = inlineErrorMessage(err, 'Prompt failed')
+
+        if (isSessionBusyError(err)) {
+          setMutableRef(busyRef, true)
+          setBusy(true)
+          setAwaitingResponse(false)
+          updateSessionState(sessionId, state => ({
+            ...state,
+            messages: state.messages.filter(m => m.id !== optimisticId),
+            busy: true,
+            awaitingResponse: false,
+            pendingBranchGroup: null
+          }))
+          notifyError(err, 'Session is still running')
+
+          return false
+        }
 
         releaseBusy()
         updateSessionState(sessionId, state => ({
@@ -523,6 +623,7 @@ export function usePromptActions({
               session_id: sessionId,
               title: arg
             })
+
             const finalTitle = (result?.title || arg).trim()
             const queued = result?.pending === true
 
@@ -674,59 +775,41 @@ export function usePromptActions({
   const cancelRun = useCallback(async () => {
     const sessionId = activeSessionId || activeSessionIdRef.current
 
-    setMutableRef(busyRef, false)
-    setBusy(false)
+    setMutableRef(busyRef, true)
+    setBusy(true)
     setAwaitingResponse(false)
 
-    const finalizeMessages = (messages: ChatMessage[]) =>
-      messages.map(message =>
-        message.pending
-          ? {
-              ...message,
-              parts: chatMessageText(message).trim()
-                ? appendTextPart(message.parts, INTERRUPTED_MARKER)
-                : [...message.parts, textPart(INTERRUPTED_MARKER.trim())],
-              pending: false
-            }
-          : message
-      )
-
     if (!sessionId) {
-      setMessages(finalizeMessages($messages.get()))
+      setMutableRef(busyRef, false)
+      setBusy(false)
 
       return
     }
 
-    updateSessionState(sessionId, state => {
-      const streamId = state.streamId
-
-      const messages = streamId
-        ? state.messages.map(message =>
-            message.id === streamId
-              ? {
-                  ...message,
-                  parts: chatMessageText(message).trim()
-                    ? appendTextPart(message.parts, INTERRUPTED_MARKER)
-                    : [...message.parts, textPart(INTERRUPTED_MARKER.trim())],
-                  pending: false
-                }
-              : message
-          )
-        : finalizeMessages(state.messages)
-
-      return {
-        ...state,
-        messages,
-        busy: false,
-        awaitingResponse: false,
-        streamId: null,
-        pendingBranchGroup: null,
-        interrupted: true
-      }
-    })
+    updateSessionState(sessionId, state => ({
+      ...state,
+      busy: true,
+      awaitingResponse: false,
+      interrupted: false,
+      needsInput: false
+    }))
 
     try {
-      await requestGateway('session.interrupt', { session_id: sessionId })
+      const result = await requestGateway<SessionInterruptResponse>('session.interrupt', { session_id: sessionId })
+      const running = Boolean(result.running || result.status === 'interrupt_requested')
+
+      updateSessionState(sessionId, state => ({
+        ...state,
+        busy: running,
+        awaitingResponse: false,
+        interrupted: false,
+        needsInput: false
+      }))
+
+      if (!running) {
+        setMutableRef(busyRef, false)
+        setBusy(false)
+      }
     } catch (err) {
       notifyError(err, 'Stop failed')
     }

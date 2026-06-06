@@ -319,6 +319,20 @@ function RunningMessageHarness({ message }: { message: ThreadMessage }) {
   )
 }
 
+function RunningMessageStatusOnlyHarness() {
+  const runtime = useExternalStoreRuntime<ThreadMessage>({
+    messages: [userMessage(), assistantMessage('first chunk')],
+    isRunning: false,
+    onNew: async () => {}
+  })
+
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <Thread />
+    </AssistantRuntimeProvider>
+  )
+}
+
 function ReasoningHarness() {
   const runtime = useExternalStoreRuntime<ThreadMessage>({
     messages: [assistantReasoningMessage(' The user is asking what this file is.')],
@@ -384,6 +398,8 @@ describe('assistant-ui streaming renderer', () => {
     const { container } = render(<StreamingHarness />)
 
     expect(screen.getByRole('status', { name: 'Hermes is loading a response' })).toBeTruthy()
+    expect(container.textContent).toContain('Working...')
+    expect(container.textContent).toContain('esc to interrupt')
 
     await wait(80)
 
@@ -391,25 +407,33 @@ describe('assistant-ui streaming renderer', () => {
       expect(container.textContent).toContain('first chunk')
     })
     expect(container.textContent).not.toContain('second chunk')
-    expect(screen.queryByRole('status', { name: 'Hermes is loading a response' })).toBeNull()
+    expect(screen.getByRole('status', { name: 'Hermes is loading a response' })).toBeTruthy()
 
     await wait(500)
 
     await waitFor(() => {
       expect(container.textContent).toContain('first chunk second chunk')
     })
+    expect(screen.getByRole('status', { name: 'Hermes is loading a response' })).toBeTruthy()
 
     await wait(250)
 
     await waitFor(() => {
       expect(container.textContent).toContain('first chunk second chunk')
     })
+    expect(screen.queryByRole('status', { name: 'Hermes is loading a response' })).toBeNull()
   })
 
   it('does not render composer clearance for intro-only threads', () => {
     const { container } = render(<IntroHarness />)
 
     expect(container.querySelector('[data-slot="aui_composer-clearance"]')).toBeNull()
+  })
+
+  it('keeps the working indicator visible when only the assistant message is marked running', () => {
+    render(<RunningMessageStatusOnlyHarness />)
+
+    expect(screen.getAllByRole('status', { name: 'Hermes is loading a response' }).length).toBeGreaterThan(0)
   })
 
   it('renders assistant provider errors inline', () => {
@@ -639,11 +663,31 @@ describe('assistant-ui streaming renderer', () => {
     expect(container.textContent).not.toContain('```ts')
   })
 
+  it('syntax-highlights an incomplete streaming fenced code block before completion', async () => {
+    const { container } = render(<RunningMessageHarness message={assistantMessage('```python\nprint("hello")\n')} />)
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-slot="code-card"][data-streaming="true"]')).toBeTruthy()
+    })
+
+    expect(container.textContent).toContain('print("hello")')
+
+    await waitFor(
+      () => {
+        expect(container.querySelector('[data-shiki-token="true"]')).toBeTruthy()
+      },
+      { timeout: 3_000 }
+    )
+  })
+
   it('renders an incomplete streaming reasoning fenced code block as a code card', async () => {
     const { container } = render(<RunningReasoningHarness />)
     const ui = within(container)
+    const thinkingButton = ui.getByRole('button', { name: /thinking/i })
 
-    fireEvent.click(ui.getByRole('button', { name: /thinking/i }))
+    if (thinkingButton.getAttribute('aria-expanded') !== 'true') {
+      fireEvent.click(thinkingButton)
+    }
 
     await waitFor(() => {
       expect(container.querySelector('[data-slot="code-card"]')).toBeTruthy()
